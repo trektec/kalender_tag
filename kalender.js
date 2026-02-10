@@ -8,11 +8,14 @@ const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
 
 // State
 let employers = [];
+let sessions = [];
 
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
     await loadEmployers();
+    await loadSessions();
     renderCalendar();
+    renderSessions();
     initializeTimeline();
 });
 
@@ -45,6 +48,24 @@ async function loadEmployers() {
             { id: 2, name: 'Anna Schmidt' },
             { id: 3, name: 'Peter Weber' }
         ];
+    }
+}
+
+// Load sessions from server
+async function loadSessions() {
+    try {
+        const response = await fetch('session_ajax.php');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        sessions = Array.isArray(data) ? data : [];
+        
+    } catch (error) {
+        console.error('Fehler beim Laden der Sessions:', error);
+        sessions = [];
     }
 }
 
@@ -133,8 +154,11 @@ function createEmployerColumn(employer) {
 function initializeTimeline() {
     createTimelineElement();
     updateTimeline();
-    // Update timeline every 30 seconds
-    setInterval(updateTimeline, 30000);
+    // Update timeline and active sessions every 30 seconds
+    setInterval(() => {
+        updateTimeline();
+        updateActiveSessions();
+    }, 30000);
 }
 
 function createTimelineElement() {
@@ -192,8 +216,133 @@ function updateTimeline() {
         timeline.style.top = `${topPosition}px`;
         
         // Format time as HH:MM
-        const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-        timeIndicator.textContent = timeString;
+        timeIndicator.textContent = formatTime(currentHour, currentMinute);
     }
+}
+
+// Helper function to format time as HH:MM
+function formatTime(hour, minute) {
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+// Render session blocks for all employees
+function renderSessions() {
+    sessions.forEach(session => {
+        renderSessionBlock(session);
+    });
+}
+
+// Render a single session block
+function renderSessionBlock(session) {
+    const employerColumn = document.querySelector(`.employer-column[data-employer-id="${session.employer_id}"]`);
+    
+    if (!employerColumn) {
+        console.warn(`Employer column not found for employer_id: ${session.employer_id}`);
+        return;
+    }
+    
+    // Parse login time
+    const [loginHour, loginMinute] = session.login_time.split(':').map(Number);
+    
+    // Calculate if session is currently active (no logout time)
+    const isActive = !session.logout_time || session.logout_time === '';
+    
+    // Parse logout time or use current time for active sessions
+    let logoutHour, logoutMinute;
+    if (isActive) {
+        const now = new Date();
+        logoutHour = now.getHours();
+        logoutMinute = now.getMinutes();
+    } else {
+        [logoutHour, logoutMinute] = session.logout_time.split(':').map(Number);
+    }
+    
+    // Check if session is within visible calendar hours (any overlap)
+    // Session is visible if it ends after START_HOUR and starts before END_HOUR
+    if (logoutHour < START_HOUR || loginHour >= END_HOUR) {
+        return; // Session outside visible hours
+    }
+    
+    // Clamp times to visible range
+    const clampedLoginHour = Math.max(loginHour, START_HOUR);
+    const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
+    const clampedLogoutHour = Math.min(logoutHour, END_HOUR);
+    const clampedLogoutMinute = logoutHour >= END_HOUR ? 0 : logoutMinute;
+    
+    // Calculate position and height
+    const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
+    const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
+    
+    const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
+    const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
+    
+    // Create session block element
+    const sessionBlock = document.createElement('div');
+    sessionBlock.className = isActive ? 'session-block active-session' : 'session-block';
+    sessionBlock.style.top = `${topPosition}px`;
+    sessionBlock.style.height = `${sessionHeight}px`;
+    
+    // Format time display
+    const loginTimeStr = formatTime(loginHour, loginMinute);
+    const logoutTimeStr = isActive ? 'Eingeloggt' : formatTime(logoutHour, logoutMinute);
+    
+    sessionBlock.innerHTML = `
+        <div class="session-time">${loginTimeStr}</div>
+        <div class="session-time">${logoutTimeStr}</div>
+    `;
+    
+    // Store session data on the element for updates
+    if (isActive) {
+        sessionBlock.dataset.sessionId = session.id;
+        sessionBlock.dataset.loginTime = session.login_time;
+    }
+    
+    employerColumn.appendChild(sessionBlock);
+}
+
+// Update active sessions to reflect current time
+function updateActiveSessions() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Find all active session blocks
+    const activeSessions = document.querySelectorAll('.session-block.active-session');
+    
+    activeSessions.forEach(sessionBlock => {
+        const loginTime = sessionBlock.dataset.loginTime;
+        if (!loginTime) return;
+        
+        const [loginHour, loginMinute] = loginTime.split(':').map(Number);
+        
+        // Check if current time is within visible calendar hours
+        if (currentHour < START_HOUR || currentHour >= END_HOUR) {
+            return; // Don't update if outside calendar hours
+        }
+        
+        // Recalculate position and height with current time
+        const clampedLoginHour = Math.max(loginHour, START_HOUR);
+        const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
+        const clampedLogoutHour = Math.min(currentHour, END_HOUR);
+        const clampedLogoutMinute = currentHour >= END_HOUR ? 0 : currentMinute;
+        
+        const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
+        const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
+        
+        const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+        const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
+        const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
+        
+        // Update the block's position and height
+        sessionBlock.style.top = `${topPosition}px`;
+        sessionBlock.style.height = `${sessionHeight}px`;
+        
+        // Update the logout time display
+        const timeElements = sessionBlock.querySelectorAll('.session-time');
+        if (timeElements.length === 2) {
+            timeElements[1].textContent = 'Eingeloggt';
+        }
+    });
 }
 

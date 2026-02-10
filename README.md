@@ -9,6 +9,13 @@ Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarb
 - **Einstellbare Stundenhöhe**: Höhe der Stundeneinteilung über einen Schieberegler anpassbar (30-120px)
 - **Ganztagstermine**: Eigener Bereich für ganztägige Termine unter jedem Mitarbeiternamen
 - **AJAX Datenabruf**: Mitarbeiterdaten werden dynamisch von `employers_ajax.php` geladen
+- **Events/Termine**: 
+  - Dynamischer Abruf von Terminen über `event_ajax.php`
+  - Verschiedene Kategorien mit unterschiedlichen Farben
+  - Ganztägige Termine werden im Ganztags-Bereich angezeigt
+  - Überlappende Termine werden nebeneinander dargestellt
+  - Einstellbare Breite über `EVENT_PADDING` Konfiguration
+  - Tooltips mit Termindetails
 
 ## Installation & Verwendung
 
@@ -25,6 +32,8 @@ Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarb
 - `style.css` - Styling für den Kalender
 - `kalender.js` - JavaScript-Logik (Datenabruf, Rendering, Stundenhöhe)
 - `employers_ajax.php` - Backend-Endpunkt für Mitarbeiterdaten
+- `session_ajax.php` - Backend-Endpunkt für Session-Daten (Anwesenheitszeiten)
+- `event_ajax.php` - Backend-Endpunkt für Event-Daten (Termine)
 
 ## Anpassung
 
@@ -41,6 +50,7 @@ const ALL_DAY_HEIGHT = 60;           // Höhe des Ganztagstermin-Bereichs in Pix
 const COLUMN_GAP = 0;                // Abstand zwischen den Spalten in Pixeln (Standard: 0)
 const EMPLOYER_HEADER_HEIGHT = 60;   // Höhe der Mitarbeiter-Kopfzeile in Pixeln (Standard: 60)
 const SESSION_PADDING = 5;           // Abstand der Session-Blöcke von den Spaltenrändern in Pixeln (Standard: 5)
+const EVENT_PADDING = 2;             // Abstand der Event-Blöcke von den Spaltenrändern in Pixeln (Standard: 2)
 ```
 
 **Beispiele:**
@@ -50,6 +60,8 @@ const SESSION_PADDING = 5;           // Abstand der Session-Blöcke von den Spal
 - Für Abstand zwischen Mitarbeitern: `const COLUMN_GAP = 10;`
 - Für schmalere Session-Blöcke: `const SESSION_PADDING = 10;`
 - Für breitere Session-Blöcke: `const SESSION_PADDING = 2;`
+- Für schmalere Event-Blöcke (mehr Abstand): `const EVENT_PADDING = 10;`
+- Für breitere Event-Blöcke (weniger Abstand): `const EVENT_PADDING = 1;`
 
 ### Mitarbeiter ändern
 
@@ -62,5 +74,34 @@ $employers = [
     // Weitere Mitarbeiter hinzufügen...
 ];
 ```
+
+### Events ändern
+
+Bearbeiten Sie `event_ajax.php` und passen Sie das `$events` Array an:
+
+```php
+$events = [
+    [
+        'id' => 1,
+        'employer_id' => 1,           // ID des Mitarbeiters
+        'date' => date('Y-m-d'),      // Datum des Termins
+        'start_time' => '08:00',      // Startzeit (HH:MM), leer bei Ganztags-Events
+        'end_time' => '09:30',        // Endzeit (HH:MM), leer bei Ganztags-Events
+        'category' => 'meeting',      // Kategorie (frei wählbar)
+        'color' => '#4a90e2',         // Farbe (Hex-Code)
+        'is_all_day' => false,        // true für Ganztags-Events
+        'title' => 'Team Meeting'     // Titel des Termins
+    ],
+    // Weitere Termine hinzufügen...
+];
+```
+
+**Kategoriefarben Beispiele:**
+- `#4a90e2` - Blau (Meetings)
+- `#e74c3c` - Rot (Appointments)
+- `#f39c12` - Orange (Training)
+- `#2ecc71` - Grün (Holiday)
+- `#9b59b6` - Lila (Planning)
+- `#1abc9c` - Türkis (Workshop)
 
 Nachdem Sie Änderungen vorgenommen haben, laden Sie die Seite im Browser neu, um die Änderungen zu sehen.

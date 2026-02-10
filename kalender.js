@@ -130,7 +130,7 @@ function getHeaderHeight() {
 // Calculate the height needed for all-day section for each employer
 function calculateAllDayHeights() {
     const allDayHeights = {};
-    let maxAllDayEvents = 1; // Minimum 1 for the default height
+    let maxAllDayEvents = 0; // Start with 0
     
     // Group events by employer
     employers.forEach(employer => {
@@ -138,7 +138,7 @@ function calculateAllDayHeights() {
             e => e.employer_id === employer.id && e.is_all_day
         );
         const count = employerAllDayEvents.length;
-        allDayHeights[employer.id] = count > 0 ? count : 0;
+        allDayHeights[employer.id] = count;
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
     });
     

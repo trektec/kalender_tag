@@ -48,6 +48,7 @@ const SESSION_WIDTH_MARGIN = 5;      // Rand der Sessions vom linken und rechten
 - Für größere Stundenhöhe: `const HOUR_HEIGHT = 80;`
 - Für mehr Platz bei Ganztagsterminen: `const ALL_DAY_HEIGHT = 100;`
 - Für Abstand zwischen Mitarbeitern: `const COLUMN_GAP = 10;`
+- Für schmalere Sessions: `const SESSION_WIDTH_MARGIN = 10;` (größerer Rand = schmalere Sessions)
 - Für breitere Sessions: `const SESSION_WIDTH_MARGIN = 2;` (kleinerer Rand = breitere Sessions)
 
 ### Mitarbeiter ändern

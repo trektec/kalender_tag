@@ -4,6 +4,7 @@ const END_HOUR = 18;
 const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
 const ALL_DAY_HEIGHT = 60; // Height of the all-day appointments section in pixels
 const COLUMN_GAP = 0; // Gap between columns in pixels
+const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
 
 // State
 let employers = [];
@@ -70,7 +71,7 @@ function createTimeColumn() {
     // Header (must match employer header + all-day section height)
     const header = document.createElement('div');
     header.className = 'time-header';
-    header.style.height = `${60 + ALL_DAY_HEIGHT}px`; // 60px for employer header + ALL_DAY_HEIGHT
+    header.style.height = `${EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT}px`;
     header.textContent = 'Zeit';
     column.appendChild(header);
     
@@ -100,6 +101,7 @@ function createEmployerColumn(employer) {
     // Employer name header
     const header = document.createElement('div');
     header.className = 'employer-header';
+    header.style.height = `${EMPLOYER_HEADER_HEIGHT}px`;
     header.textContent = employer.name;
     column.appendChild(header);
     

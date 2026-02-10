@@ -28,6 +28,26 @@ Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarb
 
 ## Anpassung
 
+### Kalender-Einstellungen
+
+Alle Einstellungen werden direkt im JavaScript-Code in der Datei `kalender.js` vorgenommen. Öffnen Sie die Datei und passen Sie die Konfigurationsvariablen am Anfang an:
+
+```javascript
+// Configuration - Adjust these values to customize the calendar
+const START_HOUR = 6;                // Startzeit (Standard: 6 Uhr)
+const END_HOUR = 18;                 // Endzeit (Standard: 18 Uhr)
+const HOUR_HEIGHT = 60;              // Höhe der Stundeneinteilung in Pixeln (Standard: 60)
+const ALL_DAY_HEIGHT = 60;           // Höhe des Ganztagstermin-Bereichs in Pixeln (Standard: 60)
+const COLUMN_GAP = 0;                // Abstand zwischen den Spalten in Pixeln (Standard: 0)
+const EMPLOYER_HEADER_HEIGHT = 60;   // Höhe der Mitarbeiter-Kopfzeile in Pixeln (Standard: 60)
+```
+
+**Beispiele:**
+
+- Für größere Stundenhöhe: `const HOUR_HEIGHT = 80;`
+- Für mehr Platz bei Ganztagsterminen: `const ALL_DAY_HEIGHT = 100;`
+- Für Abstand zwischen Mitarbeitern: `const COLUMN_GAP = 10;`
+
 ### Mitarbeiter ändern
 
 Bearbeiten Sie `employers_ajax.php` und passen Sie das `$employers` Array an:
@@ -40,11 +60,4 @@ $employers = [
 ];
 ```
 
-### Stundenbereich ändern
-
-In `kalender.js` können Sie den Zeitbereich anpassen:
-
-```javascript
-const START_HOUR = 6;  // Startzeit
-const END_HOUR = 18;   // Endzeit
-```
+Nachdem Sie Änderungen vorgenommen haben, laden Sie die Seite im Browser neu, um die Änderungen zu sehen.

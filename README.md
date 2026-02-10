@@ -40,6 +40,7 @@ const HOUR_HEIGHT = 60;              // Höhe der Stundeneinteilung in Pixeln (S
 const ALL_DAY_HEIGHT = 60;           // Höhe des Ganztagstermin-Bereichs in Pixeln (Standard: 60)
 const COLUMN_GAP = 0;                // Abstand zwischen den Spalten in Pixeln (Standard: 0)
 const EMPLOYER_HEADER_HEIGHT = 60;   // Höhe der Mitarbeiter-Kopfzeile in Pixeln (Standard: 60)
+const SESSION_PADDING = 5;           // Abstand der Session-Blöcke von den Spaltenrändern in Pixeln (Standard: 5)
 ```
 
 **Beispiele:**
@@ -47,6 +48,8 @@ const EMPLOYER_HEADER_HEIGHT = 60;   // Höhe der Mitarbeiter-Kopfzeile in Pixel
 - Für größere Stundenhöhe: `const HOUR_HEIGHT = 80;`
 - Für mehr Platz bei Ganztagsterminen: `const ALL_DAY_HEIGHT = 100;`
 - Für Abstand zwischen Mitarbeitern: `const COLUMN_GAP = 10;`
+- Für schmalere Session-Blöcke: `const SESSION_PADDING = 10;`
+- Für breitere Session-Blöcke: `const SESSION_PADDING = 2;`
 
 ### Mitarbeiter ändern
 

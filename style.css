@@ -163,8 +163,6 @@ h1 {
 /* Session block styles */
 .session-block {
     position: absolute;
-    left: 5px;
-    right: 5px;
     background-color: #d3d3d3;
     border: 2px solid #c0c0c0;
     border-radius: 5px;

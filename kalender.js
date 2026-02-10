@@ -5,6 +5,7 @@ const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
 const ALL_DAY_HEIGHT = 60; // Height of the all-day appointments section in pixels
 const COLUMN_GAP = 0; // Gap between columns in pixels
 const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
+const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
 
 // State
 let employers = [];
@@ -79,8 +80,9 @@ function renderCalendar() {
     calendarDiv.appendChild(timeColumnLeft);
     
     // Create employer columns
-    employers.forEach(employer => {
-        const employerColumn = createEmployerColumn(employer);
+    employers.forEach((employer, index) => {
+        const isLastEmployer = index === employers.length - 1;
+        const employerColumn = createEmployerColumn(employer, isLastEmployer);
         calendarDiv.appendChild(employerColumn);
     });
     
@@ -114,13 +116,13 @@ function createTimeColumn() {
 }
 
 // Create employer column with all-day section and hours
-function createEmployerColumn(employer) {
+function createEmployerColumn(employer, isLastEmployer = false) {
     const column = document.createElement('div');
     column.className = 'employer-column';
     column.dataset.employerId = employer.id;
     
-    // Apply column gap via margin
-    if (COLUMN_GAP > 0) {
+    // Apply column gap via margin, but not for the last employer
+    if (COLUMN_GAP > 0 && !isLastEmployer) {
         column.style.marginRight = `${COLUMN_GAP}px`;
     }
     
@@ -282,6 +284,8 @@ function renderSessionBlock(session) {
     sessionBlock.className = isActive ? 'session-block active-session' : 'session-block';
     sessionBlock.style.top = `${topPosition}px`;
     sessionBlock.style.height = `${sessionHeight}px`;
+    sessionBlock.style.left = `${SESSION_PADDING}px`;
+    sessionBlock.style.right = `${SESSION_PADDING}px`;
     
     // Format time display
     const loginTimeStr = formatTime(loginHour, loginMinute);

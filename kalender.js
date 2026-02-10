@@ -8,11 +8,14 @@ const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
 
 // State
 let employers = [];
+let sessions = [];
 
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
     await loadEmployers();
+    await loadSessions();
     renderCalendar();
+    renderSessions();
     initializeTimeline();
 });
 
@@ -45,6 +48,28 @@ async function loadEmployers() {
             { id: 2, name: 'Anna Schmidt' },
             { id: 3, name: 'Peter Weber' }
         ];
+    }
+}
+
+// Load sessions from server
+async function loadSessions() {
+    try {
+        const response = await fetch('session_ajax.php');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        sessions = data;
+        
+        if (!sessions) {
+            sessions = [];
+        }
+        
+    } catch (error) {
+        console.error('Fehler beim Laden der Sessions:', error);
+        sessions = [];
     }
 }
 
@@ -195,5 +220,79 @@ function updateTimeline() {
         const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
         timeIndicator.textContent = timeString;
     }
+}
+
+// Render session blocks for all employees
+function renderSessions() {
+    sessions.forEach(session => {
+        renderSessionBlock(session);
+    });
+}
+
+// Render a single session block
+function renderSessionBlock(session) {
+    const employerColumn = document.querySelector(`.employer-column[data-employer-id="${session.employer_id}"]`);
+    
+    if (!employerColumn) {
+        console.warn(`Employer column not found for employer_id: ${session.employer_id}`);
+        return;
+    }
+    
+    // Parse login time
+    const [loginHour, loginMinute] = session.login_time.split(':').map(Number);
+    
+    // Calculate if session is currently active (no logout time)
+    const isActive = !session.logout_time || session.logout_time === '';
+    
+    // Parse logout time or use current time for active sessions
+    let logoutHour, logoutMinute;
+    if (isActive) {
+        const now = new Date();
+        logoutHour = now.getHours();
+        logoutMinute = now.getMinutes();
+    } else {
+        [logoutHour, logoutMinute] = session.logout_time.split(':').map(Number);
+    }
+    
+    // Check if session is within visible calendar hours
+    if (logoutHour < START_HOUR || loginHour > END_HOUR) {
+        return; // Session outside visible hours
+    }
+    
+    // Clamp times to visible range
+    const clampedLoginHour = Math.max(loginHour, START_HOUR);
+    const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
+    const clampedLogoutHour = Math.min(logoutHour, END_HOUR);
+    const clampedLogoutMinute = logoutHour > END_HOUR ? 0 : logoutMinute;
+    
+    // Calculate position and height
+    const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
+    const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
+    
+    const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
+    const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
+    
+    // Create session block element
+    const sessionBlock = document.createElement('div');
+    sessionBlock.className = isActive ? 'session-block active-session' : 'session-block';
+    sessionBlock.style.top = `${topPosition}px`;
+    sessionBlock.style.height = `${sessionHeight}px`;
+    
+    // Format time display
+    const loginTimeStr = `${String(loginHour).padStart(2, '0')}:${String(loginMinute).padStart(2, '0')}`;
+    let logoutTimeStr;
+    if (isActive) {
+        logoutTimeStr = 'Eingeloggt';
+    } else {
+        logoutTimeStr = `${String(logoutHour).padStart(2, '0')}:${String(logoutMinute).padStart(2, '0')}`;
+    }
+    
+    sessionBlock.innerHTML = `
+        <div class="session-time">${loginTimeStr}</div>
+        <div class="session-time">${logoutTimeStr}</div>
+    `;
+    
+    employerColumn.appendChild(sessionBlock);
 }
 

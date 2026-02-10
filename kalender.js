@@ -53,15 +53,19 @@ function renderCalendar() {
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
     
-    // Create time column
-    const timeColumn = createTimeColumn();
-    calendarDiv.appendChild(timeColumn);
+    // Create left time column
+    const timeColumnLeft = createTimeColumn();
+    calendarDiv.appendChild(timeColumnLeft);
     
     // Create employer columns
     employers.forEach(employer => {
         const employerColumn = createEmployerColumn(employer);
         calendarDiv.appendChild(employerColumn);
     });
+    
+    // Create right time column
+    const timeColumnRight = createTimeColumn();
+    calendarDiv.appendChild(timeColumnRight);
 }
 
 // Create time column with hours

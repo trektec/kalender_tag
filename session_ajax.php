@@ -28,6 +28,14 @@ $sessions = [
         'login_time' => '13:00',
         'logout_time' => '' // Currently logged in
     ],
+    // All-day event for Max
+    [
+        'id' => 7,
+        'employer_id' => 1,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00' // Spans entire day
+    ],
     
     // Anna Schmidt (employer_id: 2)
     [
@@ -36,6 +44,28 @@ $sessions = [
         'date' => date('Y-m-d'),
         'login_time' => '06:45',
         'logout_time' => '15:30'
+    ],
+    // All-day events for Anna (3 events to test the spacing)
+    [
+        'id' => 8,
+        'employer_id' => 2,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00'
+    ],
+    [
+        'id' => 9,
+        'employer_id' => 2,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00'
+    ],
+    [
+        'id' => 10,
+        'employer_id' => 2,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00'
     ],
     
     // Peter Weber (employer_id: 3)
@@ -52,6 +82,35 @@ $sessions = [
         'date' => date('Y-m-d'),
         'login_time' => '12:30',
         'logout_time' => '16:00'
+    ],
+    // All-day events for Peter (4 events to test with more than 3)
+    [
+        'id' => 11,
+        'employer_id' => 3,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00'
+    ],
+    [
+        'id' => 12,
+        'employer_id' => 3,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00'
+    ],
+    [
+        'id' => 13,
+        'employer_id' => 3,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00'
+    ],
+    [
+        'id' => 14,
+        'employer_id' => 3,
+        'date' => date('Y-m-d'),
+        'login_time' => '06:00',
+        'logout_time' => '18:00'
     ],
     
     // Julia Müller (employer_id: 4)

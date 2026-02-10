@@ -6,17 +6,21 @@ const ALL_DAY_HEIGHT = 60; // Height of the all-day appointments section in pixe
 const COLUMN_GAP = 0; // Gap between columns in pixels
 const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
 const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
+const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in pixels
 
 // State
 let employers = [];
 let sessions = [];
+let events = [];
 
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
     await loadEmployers();
     await loadSessions();
+    await loadEvents();
     renderCalendar();
     renderSessions();
+    renderEvents();
     initializeTimeline();
 });
 
@@ -67,6 +71,24 @@ async function loadSessions() {
     } catch (error) {
         console.error('Fehler beim Laden der Sessions:', error);
         sessions = [];
+    }
+}
+
+// Load events from server
+async function loadEvents() {
+    try {
+        const response = await fetch('event_ajax.php');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        events = Array.isArray(data) ? data : [];
+        
+    } catch (error) {
+        console.error('Fehler beim Laden der Events:', error);
+        events = [];
     }
 }
 
@@ -390,6 +412,236 @@ function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
     });
     
     sessionBlock.addEventListener('mouseleave', () => {
+        if (tooltip) {
+            tooltip.remove();
+            tooltip = null;
+        }
+    });
+}
+
+// Render event blocks for all employees
+function renderEvents() {
+    // Group events by employer and type (all-day vs timed)
+    const eventsByEmployer = {};
+    
+    events.forEach(event => {
+        if (!eventsByEmployer[event.employer_id]) {
+            eventsByEmployer[event.employer_id] = {
+                allDay: [],
+                timed: []
+            };
+        }
+        
+        if (event.is_all_day) {
+            eventsByEmployer[event.employer_id].allDay.push(event);
+        } else {
+            eventsByEmployer[event.employer_id].timed.push(event);
+        }
+    });
+    
+    // Render events for each employer
+    Object.keys(eventsByEmployer).forEach(employerId => {
+        renderAllDayEvents(employerId, eventsByEmployer[employerId].allDay);
+        renderTimedEvents(employerId, eventsByEmployer[employerId].timed);
+    });
+}
+
+// Render all-day events in the all-day section
+function renderAllDayEvents(employerId, allDayEvents) {
+    const employerColumn = document.querySelector(`.employer-column[data-employer-id="${employerId}"]`);
+    
+    if (!employerColumn || allDayEvents.length === 0) {
+        return;
+    }
+    
+    const allDaySection = employerColumn.querySelector('.all-day-section');
+    
+    if (!allDaySection) {
+        return;
+    }
+    
+    // Clear the "Ganztägig" text
+    allDaySection.textContent = '';
+    
+    // Calculate width for each event (they stack vertically or side by side if multiple)
+    const eventWidth = 100 / allDayEvents.length;
+    
+    allDayEvents.forEach((event, index) => {
+        const eventBlock = document.createElement('div');
+        eventBlock.className = 'event-block all-day-event';
+        eventBlock.style.backgroundColor = event.color;
+        eventBlock.style.width = `${eventWidth}%`;
+        eventBlock.style.left = `${eventWidth * index}%`;
+        eventBlock.textContent = event.title || event.category;
+        
+        // Add tooltip
+        addTooltipToEvent(eventBlock, event);
+        
+        allDaySection.appendChild(eventBlock);
+    });
+}
+
+// Render timed events in the hour slots
+function renderTimedEvents(employerId, timedEvents) {
+    const employerColumn = document.querySelector(`.employer-column[data-employer-id="${employerId}"]`);
+    
+    if (!employerColumn || timedEvents.length === 0) {
+        return;
+    }
+    
+    // Detect overlapping events and group them
+    const eventGroups = detectOverlappingEvents(timedEvents);
+    
+    // Render each group
+    eventGroups.forEach(group => {
+        renderEventGroup(employerColumn, group);
+    });
+}
+
+// Detect overlapping events and return groups
+function detectOverlappingEvents(events) {
+    // Sort events by start time
+    const sortedEvents = [...events].sort((a, b) => {
+        return timeToMinutes(a.start_time) - timeToMinutes(b.start_time);
+    });
+    
+    const groups = [];
+    
+    sortedEvents.forEach(event => {
+        // Find a group where this event overlaps
+        let addedToGroup = false;
+        
+        for (let group of groups) {
+            // Check if event overlaps with any event in the group
+            const overlaps = group.some(groupEvent => {
+                return eventsOverlap(event, groupEvent);
+            });
+            
+            if (overlaps) {
+                group.push(event);
+                addedToGroup = true;
+                break;
+            }
+        }
+        
+        // If no overlap found, create a new group
+        if (!addedToGroup) {
+            groups.push([event]);
+        }
+    });
+    
+    return groups;
+}
+
+// Check if two events overlap
+function eventsOverlap(event1, event2) {
+    const start1 = timeToMinutes(event1.start_time);
+    const end1 = timeToMinutes(event1.end_time);
+    const start2 = timeToMinutes(event2.start_time);
+    const end2 = timeToMinutes(event2.end_time);
+    
+    return start1 < end2 && start2 < end1;
+}
+
+// Convert time string (HH:MM) to minutes since midnight
+function timeToMinutes(timeStr) {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+// Render a group of overlapping events side by side
+function renderEventGroup(employerColumn, eventGroup) {
+    const groupSize = eventGroup.length;
+    const eventWidth = (100 - (EVENT_PADDING * 2)) / groupSize;
+    
+    eventGroup.forEach((event, index) => {
+        renderTimedEvent(employerColumn, event, index, groupSize, eventWidth);
+    });
+}
+
+// Render a single timed event
+function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, eventWidth) {
+    // Parse start and end times
+    const [startHour, startMinute] = event.start_time.split(':').map(Number);
+    const [endHour, endMinute] = event.end_time.split(':').map(Number);
+    
+    // Check if event is within visible calendar hours
+    if (endHour < START_HOUR || startHour >= END_HOUR) {
+        return; // Event outside visible hours
+    }
+    
+    // Clamp times to visible range
+    const clampedStartHour = Math.max(startHour, START_HOUR);
+    const clampedStartMinute = startHour < START_HOUR ? 0 : startMinute;
+    const clampedEndHour = Math.min(endHour, END_HOUR);
+    const clampedEndMinute = endHour >= END_HOUR ? 0 : endMinute;
+    
+    // Calculate position and height
+    const startFraction = (clampedStartHour - START_HOUR) + (clampedStartMinute / 60);
+    const endFraction = (clampedEndHour - START_HOUR) + (clampedEndMinute / 60);
+    
+    const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    const topPosition = headerHeight + (startFraction * HOUR_HEIGHT);
+    const eventHeight = (endFraction - startFraction) * HOUR_HEIGHT;
+    
+    // Calculate left position based on position in group
+    const leftPosition = EVENT_PADDING + (eventWidth * positionIndex);
+    
+    // Create event block element
+    const eventBlock = document.createElement('div');
+    eventBlock.className = 'event-block timed-event';
+    eventBlock.style.backgroundColor = event.color;
+    eventBlock.style.top = `${topPosition}px`;
+    eventBlock.style.height = `${eventHeight}px`;
+    eventBlock.style.left = `${leftPosition}%`;
+    eventBlock.style.width = `${eventWidth}%`;
+    
+    // Add event content
+    const timeStr = `${event.start_time}-${event.end_time}`;
+    eventBlock.innerHTML = `
+        <div class="event-title">${event.title || event.category}</div>
+        <div class="event-time">${timeStr}</div>
+    `;
+    
+    // Add tooltip
+    addTooltipToEvent(eventBlock, event);
+    
+    employerColumn.appendChild(eventBlock);
+}
+
+// Add tooltip to event block
+function addTooltipToEvent(eventBlock, event) {
+    let tooltip = null;
+    
+    eventBlock.addEventListener('mouseenter', () => {
+        const timeInfo = event.is_all_day 
+            ? 'Ganztägig' 
+            : `${event.start_time} - ${event.end_time}`;
+        
+        const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}`;
+        
+        // Create tooltip
+        tooltip = document.createElement('div');
+        tooltip.className = 'event-tooltip';
+        tooltip.style.whiteSpace = 'pre-line';
+        tooltip.textContent = tooltipText;
+        document.body.appendChild(tooltip);
+        
+        // Position tooltip near the cursor
+        const rect = eventBlock.getBoundingClientRect();
+        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+        tooltip.style.top = `${rect.top - 10}px`;
+        tooltip.style.transform = 'translate(-50%, -100%)';
+        
+        // Show tooltip after a brief delay
+        setTimeout(() => {
+            if (tooltip) {
+                tooltip.classList.add('show');
+            }
+        }, 100);
+    });
+    
+    eventBlock.addEventListener('mouseleave', () => {
         if (tooltip) {
             tooltip.remove();
             tooltip = null;

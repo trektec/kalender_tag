@@ -61,11 +61,7 @@ async function loadSessions() {
         }
         
         const data = await response.json();
-        sessions = data;
-        
-        if (!sessions) {
-            sessions = [];
-        }
+        sessions = Array.isArray(data) ? data : [];
         
     } catch (error) {
         console.error('Fehler beim Laden der Sessions:', error);
@@ -254,8 +250,8 @@ function renderSessionBlock(session) {
         [logoutHour, logoutMinute] = session.logout_time.split(':').map(Number);
     }
     
-    // Check if session is within visible calendar hours
-    if (logoutHour < START_HOUR || loginHour > END_HOUR) {
+    // Check if session is within visible calendar hours (any overlap)
+    if (logoutHour <= START_HOUR || loginHour >= END_HOUR) {
         return; // Session outside visible hours
     }
     

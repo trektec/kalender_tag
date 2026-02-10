@@ -194,7 +194,7 @@ function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
     const allDaySection = document.createElement('div');
     allDaySection.className = 'all-day-section';
     allDaySection.style.height = `${allDayHeights.maxHeight}px`;
-    allDaySection.textContent = 'Ganztägig';
+    // Don't set any default text - leave empty when no all-day events
     column.appendChild(allDaySection);
     
     // Hour slots
@@ -498,15 +498,14 @@ function renderAllDayEvents(employerId, allDayEvents) {
     // Clear the "Ganztägig" text
     allDaySection.textContent = '';
     
-    // Stack events vertically - each event takes full width
+    // Stack events vertically - each event takes full width with proper margins
     allDayEvents.forEach((event, index) => {
         const eventBlock = document.createElement('div');
         eventBlock.className = 'event-block all-day-event';
         eventBlock.style.backgroundColor = event.color;
-        eventBlock.style.width = '100%';
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
-        eventBlock.style.left = '0';
+        // Remove inline width and left styles to let CSS handle margins properly
         eventBlock.textContent = event.title || event.category;
         
         // Add tooltip

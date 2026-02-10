@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tageskalender</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="calendar-container">
+        <h1>Tageskalender</h1>
+        <div class="controls">
+            <label for="hourHeight">Stundenhöhe (px): </label>
+            <input type="range" id="hourHeight" min="30" max="120" value="60" step="10">
+            <span id="hourHeightValue">60</span>px
+        </div>
+        <div id="calendar" class="calendar-grid"></div>
+    </div>
+    <script src="kalender.js"></script>
+</body>
+</html>

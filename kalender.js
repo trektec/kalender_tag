@@ -2,8 +2,9 @@
 const START_HOUR = 6;
 const END_HOUR = 18;
 const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
-const ALL_DAY_HEIGHT = 60; // Height of the all-day appointments section in pixels
+const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section in pixels
 const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
+const ALL_DAY_BOTTOM_SPACING = 10; // Adjustable spacing after the last all-day entry in pixels
 const COLUMN_GAP = 0; // Gap between columns in pixels
 const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
 const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
@@ -143,7 +144,11 @@ function calculateAllDayHeights() {
     });
     
     // Calculate the total height needed (at least ALL_DAY_HEIGHT for the section)
-    const maxHeight = Math.max(ALL_DAY_HEIGHT, maxAllDayEvents * ALL_DAY_EVENT_HEIGHT);
+    // Add ALL_DAY_BOTTOM_SPACING to ensure proper spacing after last all-day event
+    const calculatedHeight = maxAllDayEvents > 0 
+        ? (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING 
+        : ALL_DAY_HEIGHT;
+    const maxHeight = Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
     return { perEmployer: allDayHeights, maxHeight: maxHeight };
 }

@@ -79,8 +79,9 @@ function renderCalendar() {
     calendarDiv.appendChild(timeColumnLeft);
     
     // Create employer columns
-    employers.forEach(employer => {
-        const employerColumn = createEmployerColumn(employer);
+    employers.forEach((employer, index) => {
+        const isLastEmployer = index === employers.length - 1;
+        const employerColumn = createEmployerColumn(employer, isLastEmployer);
         calendarDiv.appendChild(employerColumn);
     });
     
@@ -114,13 +115,13 @@ function createTimeColumn() {
 }
 
 // Create employer column with all-day section and hours
-function createEmployerColumn(employer) {
+function createEmployerColumn(employer, isLastEmployer = false) {
     const column = document.createElement('div');
     column.className = 'employer-column';
     column.dataset.employerId = employer.id;
     
-    // Apply column gap via margin
-    if (COLUMN_GAP > 0) {
+    // Apply column gap via margin, but not for the last employer
+    if (COLUMN_GAP > 0 && !isLastEmployer) {
         column.style.marginRight = `${COLUMN_GAP}px`;
     }
     

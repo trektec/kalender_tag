@@ -359,10 +359,18 @@ function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
     let tooltip = null;
     
     sessionBlock.addEventListener('mouseenter', (e) => {
+        // Determine tooltip text based on session state
+        let tooltipText;
+        if (sessionBlock.dataset.isActive === 'true') {
+            tooltipText = `${sessionBlock.dataset.loginTime} bis jetzt`;
+        } else {
+            tooltipText = `${loginTimeStr} bis ${logoutTimeStr}`;
+        }
+        
         // Create tooltip
         tooltip = document.createElement('div');
         tooltip.className = 'session-tooltip';
-        tooltip.textContent = `${loginTimeStr} bis ${logoutTimeStr}`;
+        tooltip.textContent = tooltipText;
         document.body.appendChild(tooltip);
         
         // Position tooltip near the cursor
@@ -383,16 +391,6 @@ function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
         if (tooltip) {
             tooltip.remove();
             tooltip = null;
-        }
-    });
-    
-    // Update tooltip text for active sessions dynamically
-    sessionBlock.addEventListener('mouseenter', () => {
-        if (sessionBlock.dataset.isActive === 'true') {
-            const loginTime = sessionBlock.dataset.loginTime;
-            if (tooltip) {
-                tooltip.textContent = `${loginTime} bis jetzt`;
-            }
         }
     });
 }

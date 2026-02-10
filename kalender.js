@@ -1,29 +1,18 @@
-// Configuration
+// Configuration - Adjust these values to customize the calendar
 const START_HOUR = 6;
 const END_HOUR = 18;
-let HOUR_HEIGHT = 60; // Default height in pixels
+const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
+const ALL_DAY_HEIGHT = 60; // Height of the all-day appointments section in pixels
+const COLUMN_GAP = 0; // Gap between columns in pixels
 
 // State
 let employers = [];
 
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    setupHourHeightControl();
     await loadEmployers();
     renderCalendar();
 });
-
-// Setup hour height control
-function setupHourHeightControl() {
-    const slider = document.getElementById('hourHeight');
-    const valueDisplay = document.getElementById('hourHeightValue');
-    
-    slider.addEventListener('input', (e) => {
-        HOUR_HEIGHT = parseInt(e.target.value);
-        valueDisplay.textContent = HOUR_HEIGHT;
-        updateHourHeights();
-    });
-}
 
 // Load employers from server
 async function loadEmployers() {
@@ -78,9 +67,10 @@ function createTimeColumn() {
     const column = document.createElement('div');
     column.className = 'time-column';
     
-    // Header
+    // Header (must match employer header + all-day section height)
     const header = document.createElement('div');
     header.className = 'time-header';
+    header.style.height = `${60 + ALL_DAY_HEIGHT}px`; // 60px for employer header + ALL_DAY_HEIGHT
     header.textContent = 'Zeit';
     column.appendChild(header);
     
@@ -102,6 +92,11 @@ function createEmployerColumn(employer) {
     column.className = 'employer-column';
     column.dataset.employerId = employer.id;
     
+    // Apply column gap via margin
+    if (COLUMN_GAP > 0) {
+        column.style.marginRight = `${COLUMN_GAP}px`;
+    }
+    
     // Employer name header
     const header = document.createElement('div');
     header.className = 'employer-header';
@@ -111,6 +106,7 @@ function createEmployerColumn(employer) {
     // All-day section
     const allDaySection = document.createElement('div');
     allDaySection.className = 'all-day-section';
+    allDaySection.style.height = `${ALL_DAY_HEIGHT}px`;
     allDaySection.textContent = 'Ganztägig';
     column.appendChild(allDaySection);
     
@@ -124,19 +120,4 @@ function createEmployerColumn(employer) {
     }
     
     return column;
-}
-
-// Update hour heights when slider changes
-function updateHourHeights() {
-    // Update time slots
-    const timeSlots = document.querySelectorAll('.time-slot');
-    timeSlots.forEach(slot => {
-        slot.style.height = `${HOUR_HEIGHT}px`;
-    });
-    
-    // Update hour slots
-    const hourSlots = document.querySelectorAll('.hour-slot');
-    hourSlots.forEach(slot => {
-        slot.style.height = `${HOUR_HEIGHT}px`;
-    });
 }

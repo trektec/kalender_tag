@@ -25,24 +25,6 @@ h1 {
     color: #333;
 }
 
-.controls {
-    margin-bottom: 20px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.controls label {
-    font-weight: bold;
-}
-
-.controls input[type="range"] {
-    width: 200px;
-}
-
 .calendar-grid {
     display: flex;
     overflow-x: auto;
@@ -58,7 +40,6 @@ h1 {
 }
 
 .time-header {
-    height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -99,7 +80,6 @@ h1 {
 }
 
 .all-day-section {
-    height: 60px;
     background-color: #f0f8ff;
     border-bottom: 2px solid #ddd;
     padding: 5px;

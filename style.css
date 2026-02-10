@@ -99,9 +99,7 @@ h1 {
     transition: background-color 0.2s;
 }
 
-.hour-slot:hover {
-    background-color: #f9f9ff;
-}
+/* Hover effects removed per requirement */
 
 .loading {
     text-align: center;
@@ -228,11 +226,7 @@ h1 {
     transition: box-shadow 0.2s, transform 0.2s;
 }
 
-.event-block:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    transform: translateY(-1px);
-    z-index: 70;
-}
+/* Hover effects removed per requirement */
 
 .event-block.all-day-event {
     position: absolute;

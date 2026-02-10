@@ -296,6 +296,7 @@ function renderSessionBlock(session) {
     sessionBlock.dataset.loginTime = loginTimeStr;
     sessionBlock.dataset.logoutTime = logoutTimeStr;
     sessionBlock.dataset.isActive = isActive;
+    // Session ID is stored only for active sessions to support future updates
     if (isActive) {
         sessionBlock.dataset.sessionId = session.id;
     }
@@ -358,7 +359,7 @@ function updateActiveSessions() {
 function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
     let tooltip = null;
     
-    sessionBlock.addEventListener('mouseenter', (e) => {
+    sessionBlock.addEventListener('mouseenter', () => {
         // Get current tooltip text from dataset
         const loginTime = sessionBlock.dataset.loginTime;
         const logoutTime = sessionBlock.dataset.logoutTime;

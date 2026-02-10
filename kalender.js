@@ -3,6 +3,7 @@ const START_HOUR = 6;
 const END_HOUR = 18;
 const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
 const ALL_DAY_HEIGHT = 60; // Height of the all-day appointments section in pixels
+const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
 const COLUMN_GAP = 0; // Gap between columns in pixels
 const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
 const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
@@ -12,6 +13,7 @@ const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in
 let employers = [];
 let sessions = [];
 let events = [];
+let currentAllDayHeights = null; // Cache for all-day heights
 
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -97,31 +99,64 @@ function renderCalendar() {
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
     
+    // Calculate all-day section heights for each employer
+    const allDayHeights = calculateAllDayHeights();
+    currentAllDayHeights = allDayHeights; // Cache for later use
+    
     // Create left time column
-    const timeColumnLeft = createTimeColumn();
+    const timeColumnLeft = createTimeColumn(allDayHeights);
     calendarDiv.appendChild(timeColumnLeft);
     
     // Create employer columns
     employers.forEach((employer, index) => {
         const isLastEmployer = index === employers.length - 1;
-        const employerColumn = createEmployerColumn(employer, isLastEmployer);
+        const employerColumn = createEmployerColumn(employer, isLastEmployer, allDayHeights);
         calendarDiv.appendChild(employerColumn);
     });
     
     // Create right time column
-    const timeColumnRight = createTimeColumn();
+    const timeColumnRight = createTimeColumn(allDayHeights);
     calendarDiv.appendChild(timeColumnRight);
 }
 
+// Helper function to get the current header height (employer header + all-day section)
+function getHeaderHeight() {
+    if (currentAllDayHeights) {
+        return EMPLOYER_HEADER_HEIGHT + currentAllDayHeights.maxHeight;
+    }
+    return EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+}
+
+// Calculate the height needed for all-day section for each employer
+function calculateAllDayHeights() {
+    const allDayHeights = {};
+    let maxAllDayEvents = 1; // Minimum 1 for the default height
+    
+    // Group events by employer
+    employers.forEach(employer => {
+        const employerAllDayEvents = events.filter(
+            e => e.employer_id === employer.id && e.is_all_day
+        );
+        const count = employerAllDayEvents.length;
+        allDayHeights[employer.id] = count > 0 ? count : 0;
+        maxAllDayEvents = Math.max(maxAllDayEvents, count);
+    });
+    
+    // Calculate the total height needed (at least ALL_DAY_HEIGHT for the section)
+    const maxHeight = Math.max(ALL_DAY_HEIGHT, maxAllDayEvents * ALL_DAY_EVENT_HEIGHT);
+    
+    return { perEmployer: allDayHeights, maxHeight: maxHeight };
+}
+
 // Create time column with hours
-function createTimeColumn() {
+function createTimeColumn(allDayHeights) {
     const column = document.createElement('div');
     column.className = 'time-column';
     
     // Header (must match employer header + all-day section height)
     const header = document.createElement('div');
     header.className = 'time-header';
-    header.style.height = `${EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT}px`;
+    header.style.height = `${EMPLOYER_HEADER_HEIGHT + allDayHeights.maxHeight}px`;
     header.textContent = 'Zeit';
     column.appendChild(header);
     
@@ -138,7 +173,7 @@ function createTimeColumn() {
 }
 
 // Create employer column with all-day section and hours
-function createEmployerColumn(employer, isLastEmployer = false) {
+function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
     const column = document.createElement('div');
     column.className = 'employer-column';
     column.dataset.employerId = employer.id;
@@ -155,10 +190,10 @@ function createEmployerColumn(employer, isLastEmployer = false) {
     header.textContent = employer.name;
     column.appendChild(header);
     
-    // All-day section
+    // All-day section (use max height across all employers)
     const allDaySection = document.createElement('div');
     allDaySection.className = 'all-day-section';
-    allDaySection.style.height = `${ALL_DAY_HEIGHT}px`;
+    allDaySection.style.height = `${allDayHeights.maxHeight}px`;
     allDaySection.textContent = 'Ganztägig';
     column.appendChild(allDaySection);
     
@@ -228,7 +263,7 @@ function updateTimeline() {
     const totalHoursFraction = hoursSinceStart + minutesFraction;
     
     // Calculate top position (header height + all-day height + hour position)
-    const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    const headerHeight = getHeaderHeight();
     const topPosition = headerHeight + (totalHoursFraction * HOUR_HEIGHT);
     
     // Update timeline position
@@ -297,7 +332,7 @@ function renderSessionBlock(session) {
     const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
     const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
     
-    const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    const headerHeight = getHeaderHeight();
     const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
     const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
     
@@ -362,7 +397,7 @@ function updateActiveSessions() {
         const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
         const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
         
-        const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+        const headerHeight = getHeaderHeight();
         const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
         const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
         
@@ -463,15 +498,15 @@ function renderAllDayEvents(employerId, allDayEvents) {
     // Clear the "Ganztägig" text
     allDaySection.textContent = '';
     
-    // Calculate width for each event (they stack vertically or side by side if multiple)
-    const eventWidth = 100 / allDayEvents.length;
-    
+    // Stack events vertically - each event takes full width
     allDayEvents.forEach((event, index) => {
         const eventBlock = document.createElement('div');
         eventBlock.className = 'event-block all-day-event';
         eventBlock.style.backgroundColor = event.color;
-        eventBlock.style.width = `${eventWidth}%`;
-        eventBlock.style.left = `${eventWidth * index}%`;
+        eventBlock.style.width = '100%';
+        eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
+        eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
+        eventBlock.style.left = '0';
         eventBlock.textContent = event.title || event.category;
         
         // Add tooltip
@@ -580,7 +615,7 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     const startFraction = (clampedStartHour - START_HOUR) + (clampedStartMinute / 60);
     const endFraction = (clampedEndHour - START_HOUR) + (clampedEndMinute / 60);
     
-    const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    const headerHeight = getHeaderHeight();
     const topPosition = headerHeight + (startFraction * HOUR_HEIGHT);
     const eventHeight = (endFraction - startFraction) * HOUR_HEIGHT;
     

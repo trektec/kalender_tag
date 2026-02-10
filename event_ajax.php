@@ -58,6 +58,17 @@ $events = [
         'is_all_day' => true,
         'title' => 'Conference'
     ],
+    [
+        'id' => 13,
+        'employer_id' => 1,
+        'date' => date('Y-m-d'),
+        'start_time' => '',
+        'end_time' => '',
+        'category' => 'training',
+        'color' => '#e67e22',
+        'is_all_day' => true,
+        'title' => 'Workshop Day'
+    ],
     
     // Anna Schmidt (employer_id: 2)
     [
@@ -95,6 +106,39 @@ $events = [
     ],
     
     // Peter Weber (employer_id: 3)
+    [
+        'id' => 14,
+        'employer_id' => 3,
+        'date' => date('Y-m-d'),
+        'start_time' => '',
+        'end_time' => '',
+        'category' => 'meeting',
+        'color' => '#3498db',
+        'is_all_day' => true,
+        'title' => 'All-Day Meeting'
+    ],
+    [
+        'id' => 15,
+        'employer_id' => 3,
+        'date' => date('Y-m-d'),
+        'start_time' => '',
+        'end_time' => '',
+        'category' => 'training',
+        'color' => '#9b59b6',
+        'is_all_day' => true,
+        'title' => 'Training'
+    ],
+    [
+        'id' => 16,
+        'employer_id' => 3,
+        'date' => date('Y-m-d'),
+        'start_time' => '',
+        'end_time' => '',
+        'category' => 'workshop',
+        'color' => '#e74c3c',
+        'is_all_day' => true,
+        'title' => 'Team Building'
+    ],
     [
         'id' => 8,
         'employer_id' => 3,

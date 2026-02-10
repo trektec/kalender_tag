@@ -154,8 +154,11 @@ function createEmployerColumn(employer) {
 function initializeTimeline() {
     createTimelineElement();
     updateTimeline();
-    // Update timeline every 30 seconds
-    setInterval(updateTimeline, 30000);
+    // Update timeline and active sessions every 30 seconds
+    setInterval(() => {
+        updateTimeline();
+        updateActiveSessions();
+    }, 30000);
 }
 
 function createTimelineElement() {
@@ -289,6 +292,57 @@ function renderSessionBlock(session) {
         <div class="session-time">${logoutTimeStr}</div>
     `;
     
+    // Store session data on the element for updates
+    if (isActive) {
+        sessionBlock.dataset.sessionId = session.id;
+        sessionBlock.dataset.loginTime = session.login_time;
+    }
+    
     employerColumn.appendChild(sessionBlock);
+}
+
+// Update active sessions to reflect current time
+function updateActiveSessions() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Find all active session blocks
+    const activeSessions = document.querySelectorAll('.session-block.active-session');
+    
+    activeSessions.forEach(sessionBlock => {
+        const loginTime = sessionBlock.dataset.loginTime;
+        if (!loginTime) return;
+        
+        const [loginHour, loginMinute] = loginTime.split(':').map(Number);
+        
+        // Check if current time is within visible calendar hours
+        if (currentHour < START_HOUR || currentHour >= END_HOUR) {
+            return; // Don't update if outside calendar hours
+        }
+        
+        // Recalculate position and height with current time
+        const clampedLoginHour = Math.max(loginHour, START_HOUR);
+        const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
+        const clampedLogoutHour = Math.min(currentHour, END_HOUR);
+        const clampedLogoutMinute = currentHour >= END_HOUR ? 0 : currentMinute;
+        
+        const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
+        const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
+        
+        const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+        const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
+        const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
+        
+        // Update the block's position and height
+        sessionBlock.style.top = `${topPosition}px`;
+        sessionBlock.style.height = `${sessionHeight}px`;
+        
+        // Update the logout time display
+        const timeElements = sessionBlock.querySelectorAll('.session-time');
+        if (timeElements.length === 2) {
+            timeElements[1].textContent = 'Eingeloggt';
+        }
+    });
 }
 

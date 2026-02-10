@@ -213,9 +213,13 @@ function updateTimeline() {
         timeline.style.top = `${topPosition}px`;
         
         // Format time as HH:MM
-        const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-        timeIndicator.textContent = timeString;
+        timeIndicator.textContent = formatTime(currentHour, currentMinute);
     }
+}
+
+// Helper function to format time as HH:MM
+function formatTime(hour, minute) {
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
 // Render session blocks for all employees
@@ -251,7 +255,8 @@ function renderSessionBlock(session) {
     }
     
     // Check if session is within visible calendar hours (any overlap)
-    if (logoutHour <= START_HOUR || loginHour >= END_HOUR) {
+    // Session is visible if it ends after START_HOUR and starts before END_HOUR
+    if (logoutHour < START_HOUR || loginHour >= END_HOUR) {
         return; // Session outside visible hours
     }
     
@@ -276,13 +281,8 @@ function renderSessionBlock(session) {
     sessionBlock.style.height = `${sessionHeight}px`;
     
     // Format time display
-    const loginTimeStr = `${String(loginHour).padStart(2, '0')}:${String(loginMinute).padStart(2, '0')}`;
-    let logoutTimeStr;
-    if (isActive) {
-        logoutTimeStr = 'Eingeloggt';
-    } else {
-        logoutTimeStr = `${String(logoutHour).padStart(2, '0')}:${String(logoutMinute).padStart(2, '0')}`;
-    }
+    const loginTimeStr = formatTime(loginHour, loginMinute);
+    const logoutTimeStr = isActive ? 'Eingeloggt' : formatTime(logoutHour, logoutMinute);
     
     sessionBlock.innerHTML = `
         <div class="session-time">${loginTimeStr}</div>

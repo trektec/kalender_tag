@@ -182,8 +182,7 @@ h1 {
 }
 
 .session-block.active-session {
-    background-color: #d3d3d3;
-    border: 2px solid #c0c0c0;
+    /* Active sessions use the same styling as regular sessions */
 }
 
 @keyframes pulse {

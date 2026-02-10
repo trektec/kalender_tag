@@ -285,7 +285,7 @@ function renderSessionBlock(session) {
     
     // Format time display
     const loginTimeStr = formatTime(loginHour, loginMinute);
-    const logoutTimeStr = isActive ? 'Eingeloggt' : formatTime(logoutHour, logoutMinute);
+    const logoutTimeStr = isActive ? 'jetzt' : formatTime(logoutHour, logoutMinute);
     
     sessionBlock.innerHTML = `
         <div class="session-time">${loginTimeStr}</div>
@@ -293,10 +293,15 @@ function renderSessionBlock(session) {
     `;
     
     // Store session data on the element for updates
+    sessionBlock.dataset.loginTime = session.login_time;
+    sessionBlock.dataset.logoutTime = isActive ? 'jetzt' : session.logout_time;
+    sessionBlock.dataset.isActive = isActive;
     if (isActive) {
         sessionBlock.dataset.sessionId = session.id;
-        sessionBlock.dataset.loginTime = session.login_time;
     }
+    
+    // Add tooltip functionality
+    addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr);
     
     employerColumn.appendChild(sessionBlock);
 }
@@ -341,7 +346,53 @@ function updateActiveSessions() {
         // Update the logout time display
         const timeElements = sessionBlock.querySelectorAll('.session-time');
         if (timeElements.length === 2) {
-            timeElements[1].textContent = 'Eingeloggt';
+            timeElements[1].textContent = 'jetzt';
+        }
+        
+        // Update tooltip data
+        sessionBlock.dataset.logoutTime = 'jetzt';
+    });
+}
+
+// Add tooltip to session block
+function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
+    let tooltip = null;
+    
+    sessionBlock.addEventListener('mouseenter', (e) => {
+        // Create tooltip
+        tooltip = document.createElement('div');
+        tooltip.className = 'session-tooltip';
+        tooltip.textContent = `${loginTimeStr} bis ${logoutTimeStr}`;
+        document.body.appendChild(tooltip);
+        
+        // Position tooltip near the cursor
+        const rect = sessionBlock.getBoundingClientRect();
+        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+        tooltip.style.top = `${rect.top - 30}px`;
+        tooltip.style.transform = 'translateX(-50%)';
+        
+        // Show tooltip after a brief delay
+        setTimeout(() => {
+            if (tooltip) {
+                tooltip.classList.add('show');
+            }
+        }, 100);
+    });
+    
+    sessionBlock.addEventListener('mouseleave', () => {
+        if (tooltip) {
+            tooltip.remove();
+            tooltip = null;
+        }
+    });
+    
+    // Update tooltip text for active sessions dynamically
+    sessionBlock.addEventListener('mouseenter', () => {
+        if (sessionBlock.dataset.isActive === 'true') {
+            const loginTime = sessionBlock.dataset.loginTime;
+            if (tooltip) {
+                tooltip.textContent = `${loginTime} bis jetzt`;
+            }
         }
     });
 }

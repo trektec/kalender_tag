@@ -145,9 +145,7 @@ function calculateAllDayHeights() {
     
     // Calculate the total height needed (at least ALL_DAY_HEIGHT for the section)
     // Add ALL_DAY_BOTTOM_SPACING to ensure proper spacing after last all-day event
-    const calculatedHeight = maxAllDayEvents > 0 
-        ? (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING 
-        : ALL_DAY_HEIGHT;
+    const calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
     const maxHeight = Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
     return { perEmployer: allDayHeights, maxHeight: maxHeight };

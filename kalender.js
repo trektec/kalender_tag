@@ -5,6 +5,7 @@ const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
 const ALL_DAY_HEIGHT = 60; // Height of the all-day appointments section in pixels
 const COLUMN_GAP = 0; // Gap between columns in pixels
 const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
+const SESSION_WIDTH_MARGIN = 5; // Margin from left and right edges of the column in pixels
 
 // State
 let employers = [];
@@ -250,6 +251,7 @@ function renderSessionBlock(session) {
     // Parse logout time or use current time for active sessions
     let logoutHour, logoutMinute;
     if (isActive) {
+        // For active sessions, only show up to the current time (timeline)
         const now = new Date();
         logoutHour = now.getHours();
         logoutMinute = now.getMinutes();
@@ -279,9 +281,11 @@ function renderSessionBlock(session) {
     
     // Create session block element
     const sessionBlock = document.createElement('div');
-    sessionBlock.className = isActive ? 'session-block active-session' : 'session-block';
+    sessionBlock.className = 'session-block';
     sessionBlock.style.top = `${topPosition}px`;
     sessionBlock.style.height = `${sessionHeight}px`;
+    sessionBlock.style.left = `${SESSION_WIDTH_MARGIN}px`;
+    sessionBlock.style.right = `${SESSION_WIDTH_MARGIN}px`;
     
     // Format time display
     const loginTimeStr = formatTime(loginHour, loginMinute);
@@ -308,7 +312,7 @@ function updateActiveSessions() {
     const currentMinute = now.getMinutes();
     
     // Find all active session blocks
-    const activeSessions = document.querySelectorAll('.session-block.active-session');
+    const activeSessions = document.querySelectorAll('.session-block[data-session-id]');
     
     activeSessions.forEach(sessionBlock => {
         const loginTime = sessionBlock.dataset.loginTime;
@@ -321,7 +325,7 @@ function updateActiveSessions() {
             return; // Don't update if outside calendar hours
         }
         
-        // Recalculate position and height with current time
+        // Recalculate position and height with current time (only up to timeline)
         const clampedLoginHour = Math.max(loginHour, START_HOUR);
         const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
         const clampedLogoutHour = Math.min(currentHour, END_HOUR);

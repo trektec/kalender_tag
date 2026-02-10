@@ -13,6 +13,7 @@ Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarb
   - Dynamischer Abruf von Terminen über `event_ajax.php`
   - Verschiedene Kategorien mit unterschiedlichen Farben
   - Ganztägige Termine werden im Ganztags-Bereich angezeigt
+  - **Mehrere Ganztags-Events werden vertikal gestapelt** (untereinander)
   - Überlappende Termine werden nebeneinander dargestellt
   - Einstellbare Breite über `EVENT_PADDING` Konfiguration
   - Tooltips mit Termindetails
@@ -46,7 +47,8 @@ Alle Einstellungen werden direkt im JavaScript-Code in der Datei `kalender.js` v
 const START_HOUR = 6;                // Startzeit (Standard: 6 Uhr)
 const END_HOUR = 18;                 // Endzeit (Standard: 18 Uhr)
 const HOUR_HEIGHT = 60;              // Höhe der Stundeneinteilung in Pixeln (Standard: 60)
-const ALL_DAY_HEIGHT = 60;           // Höhe des Ganztagstermin-Bereichs in Pixeln (Standard: 60)
+const ALL_DAY_HEIGHT = 60;           // Minimale Höhe des Ganztagstermin-Bereichs in Pixeln (Standard: 60)
+const ALL_DAY_EVENT_HEIGHT = 30;     // Höhe jedes einzelnen Ganztags-Events in Pixeln (Standard: 30)
 const COLUMN_GAP = 0;                // Abstand zwischen den Spalten in Pixeln (Standard: 0)
 const EMPLOYER_HEADER_HEIGHT = 60;   // Höhe der Mitarbeiter-Kopfzeile in Pixeln (Standard: 60)
 const SESSION_PADDING = 5;           // Abstand der Session-Blöcke von den Spaltenrändern in Pixeln (Standard: 5)
@@ -56,12 +58,15 @@ const EVENT_PADDING = 2;             // Abstand der Event-Blöcke von den Spalte
 **Beispiele:**
 
 - Für größere Stundenhöhe: `const HOUR_HEIGHT = 80;`
-- Für mehr Platz bei Ganztagsterminen: `const ALL_DAY_HEIGHT = 100;`
+- Für mehr Platz bei Ganztagsterminen (min): `const ALL_DAY_HEIGHT = 100;`
+- Für größere Ganztags-Events: `const ALL_DAY_EVENT_HEIGHT = 40;`
 - Für Abstand zwischen Mitarbeitern: `const COLUMN_GAP = 10;`
 - Für schmalere Session-Blöcke: `const SESSION_PADDING = 10;`
 - Für breitere Session-Blöcke: `const SESSION_PADDING = 2;`
 - Für schmalere Event-Blöcke (mehr Abstand): `const EVENT_PADDING = 10;`
 - Für breitere Event-Blöcke (weniger Abstand): `const EVENT_PADDING = 1;`
+
+**Hinweis:** Der Ganztags-Bereich passt sich automatisch der Anzahl der Events an. Wenn ein Mitarbeiter z.B. 3 Ganztags-Events hat, wird die Höhe auf `3 × ALL_DAY_EVENT_HEIGHT` berechnet (aber mindestens `ALL_DAY_HEIGHT`).
 
 ### Mitarbeiter ändern
 

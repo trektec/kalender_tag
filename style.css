@@ -110,3 +110,46 @@ h1 {
     font-size: 18px;
     color: #d9534f;
 }
+
+/* Timeline styles */
+.timeline-container {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.timeline-indicator {
+    position: absolute;
+    left: 0;
+    width: 80px;
+    height: 24px;
+    background-color: red;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 3px;
+    margin-top: -11px;
+}
+
+.timeline-line {
+    position: absolute;
+    left: 80px;
+    right: 0;
+    height: 2px;
+    background-color: red;
+    box-shadow: 0 0 3px rgba(255, 0, 0, 0.5);
+}
+
+.calendar-grid {
+    display: flex;
+    overflow-x: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    position: relative;
+}

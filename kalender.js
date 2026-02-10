@@ -13,6 +13,7 @@ let employers = [];
 document.addEventListener('DOMContentLoaded', async () => {
     await loadEmployers();
     renderCalendar();
+    initializeTimeline();
 });
 
 // Load employers from server
@@ -123,3 +124,72 @@ function createEmployerColumn(employer) {
     
     return column;
 }
+
+// Timeline functionality
+function initializeTimeline() {
+    createTimelineElement();
+    updateTimeline();
+    // Update timeline every 30 seconds
+    setInterval(updateTimeline, 30000);
+}
+
+function createTimelineElement() {
+    const calendarGrid = document.getElementById('calendar');
+    
+    // Create timeline container
+    const timelineContainer = document.createElement('div');
+    timelineContainer.className = 'timeline-container';
+    timelineContainer.id = 'timeline';
+    
+    // Create time indicator (left side with white text)
+    const timeIndicator = document.createElement('div');
+    timeIndicator.className = 'timeline-indicator';
+    timeIndicator.id = 'timeline-indicator';
+    
+    // Create red line (spans across columns)
+    const timelineLine = document.createElement('div');
+    timelineLine.className = 'timeline-line';
+    
+    timelineContainer.appendChild(timeIndicator);
+    timelineContainer.appendChild(timelineLine);
+    calendarGrid.appendChild(timelineContainer);
+}
+
+function updateTimeline() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Check if current time is within calendar hours
+    if (currentHour < START_HOUR || currentHour >= END_HOUR + 1) {
+        // Hide timeline if outside calendar hours
+        const timeline = document.getElementById('timeline');
+        if (timeline) {
+            timeline.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Calculate position
+    const hoursSinceStart = currentHour - START_HOUR;
+    const minutesFraction = currentMinute / 60;
+    const totalHoursFraction = hoursSinceStart + minutesFraction;
+    
+    // Calculate top position (header height + all-day height + hour position)
+    const headerHeight = EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    const topPosition = headerHeight + (totalHoursFraction * HOUR_HEIGHT);
+    
+    // Update timeline position
+    const timeline = document.getElementById('timeline');
+    const timeIndicator = document.getElementById('timeline-indicator');
+    
+    if (timeline && timeIndicator) {
+        timeline.style.display = 'block';
+        timeline.style.top = `${topPosition}px`;
+        
+        // Format time as HH:MM
+        const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+        timeIndicator.textContent = timeString;
+    }
+}
+

@@ -495,9 +495,6 @@ function renderAllDayEvents(employerId, allDayEvents) {
         return;
     }
     
-    // Clear the "Ganztägig" text
-    allDaySection.textContent = '';
-    
     // Stack events vertically - each event takes full width with proper margins
     allDayEvents.forEach((event, index) => {
         const eventBlock = document.createElement('div');

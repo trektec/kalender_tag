@@ -1,6 +1,13 @@
 <?php
 header('Content-Type: application/json');
 
+// NOTE: This is sample code for demonstration purposes.
+// In a production environment, you should:
+// 1. Add authentication to verify the user is logged in
+// 2. Add authorization to ensure users can only see sessions they have permission to view
+// 3. Retrieve data from a secure database instead of hardcoded arrays
+// 4. Validate and sanitize any input parameters (e.g., date filters)
+
 // Sample session data for employees
 // In a real application, this would come from a database
 // Structure: id, employer_id, date, login_time, logout_time

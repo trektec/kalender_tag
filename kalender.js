@@ -264,7 +264,7 @@ function renderSessionBlock(session) {
     const clampedLoginHour = Math.max(loginHour, START_HOUR);
     const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
     const clampedLogoutHour = Math.min(logoutHour, END_HOUR);
-    const clampedLogoutMinute = logoutHour > END_HOUR ? 0 : logoutMinute;
+    const clampedLogoutMinute = logoutHour >= END_HOUR ? 0 : logoutMinute;
     
     // Calculate position and height
     const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);

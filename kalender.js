@@ -26,14 +26,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Check if a session is an all-day event
 function isAllDayEvent(session) {
-    // A session is considered all-day if it has no login_time or logout_time
-    // or if it spans the entire day (starts at or before START_HOUR and ends at or after END_HOUR)
-    if (!session.login_time && !session.logout_time) {
-        return true;
-    }
+    // A session is considered all-day if it spans the entire visible day
+    // (starts at or before START_HOUR and ends at or after END_HOUR)
     
+    // Sessions with missing time data are not considered all-day events
     if (!session.login_time || !session.logout_time) {
-        return false; // Active sessions are not all-day
+        return false;
     }
     
     const [loginHour, loginMinute] = session.login_time.split(':').map(Number);

@@ -111,8 +111,8 @@ h1 {
 }
 
 .all-day-event-block {
-    background-color: #87ceeb;
-    border: 2px solid #4a90e2;
+    background-color: #4a90e2;
+    border: 2px solid #2e5f8e;
     border-radius: 4px;
     padding: 3px 8px;
     display: flex;
@@ -127,7 +127,7 @@ h1 {
 }
 
 .all-day-event-block:hover {
-    background-color: #6bb6d6;
+    background-color: #357abd;
 }
 
 .all-day-event-title {

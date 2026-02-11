@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wochenkalender</title>
+    <link rel="stylesheet" href="kalender_tag.css">
+</head>
+<body>
+    <div class="calendar-container">
+        <div class="header-container">
+            <h1>Wochenkalender</h1>
+            <div class="date-navigation">
+                <button id="prevWeekBtn" class="nav-btn" title="Vorherige Woche">◄</button>
+                <button id="todayBtn" class="nav-btn today-btn" title="Diese Woche">Diese Woche</button>
+                <button id="nextWeekBtn" class="nav-btn" title="Nächste Woche">►</button>
+            </div>
+        </div>
+        <div id="currentWeekDisplay" class="current-date"></div>
+        <div id="calendar" class="calendar-grid"></div>
+    </div>
+    <script src="kalender_woche.js"></script>
+</body>
+</html>

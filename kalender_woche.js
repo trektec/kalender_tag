@@ -6,16 +6,17 @@ const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section
 const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
 const ALL_DAY_BOTTOM_SPACING = 10; // Adjustable spacing after the last all-day entry in pixels
 const COLUMN_GAP = 0; // Gap between columns in pixels
-const EMPLOYER_HEADER_HEIGHT = 40; // Height of employer name header in pixels
-const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
+const DAY_HEADER_HEIGHT = 40; // Height of day name header in pixels
 const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in pixels
 
 // State
-let employers = [];
-let sessions = [];
 let events = [];
 let currentAllDayHeights = null; // Cache for all-day heights
-let currentDate = new Date(); // Current selected date
+let currentDate = new Date(); // Current selected date (we'll calculate Monday of this week)
+
+// Days of week in German
+const DAYS_OF_WEEK = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
 // Helper function to validate hex color format
 function isValidHexColor(color) {
@@ -45,64 +46,82 @@ function getContrastingTextColor(hexColor) {
     return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
+// Get Monday of the week for a given date
+function getMondayOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    return new Date(d.setDate(diff));
+}
+
+// Get array of dates for the week (Monday to Sunday)
+function getWeekDates(mondayDate) {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(mondayDate);
+        date.setDate(mondayDate.getDate() + i);
+        dates.push(date);
+    }
+    return dates;
+}
+
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
-    updateDateDisplay();
-    await loadEmployers();
-    await loadSessions();
+    updateWeekDisplay();
     await loadEvents();
     renderCalendar();
-    renderSessions();
     renderEvents();
     initializeTimeline();
 });
 
 // Setup navigation button handlers
 function setupNavigationHandlers() {
-    document.getElementById('prevDayBtn').addEventListener('click', () => {
-        changeDay(-1);
+    document.getElementById('prevWeekBtn').addEventListener('click', () => {
+        changeWeek(-7);
     });
     
     document.getElementById('todayBtn').addEventListener('click', () => {
-        setToday();
+        setThisWeek();
     });
     
-    document.getElementById('nextDayBtn').addEventListener('click', () => {
-        changeDay(1);
+    document.getElementById('nextWeekBtn').addEventListener('click', () => {
+        changeWeek(7);
     });
 }
 
 // Change current date by days offset
-async function changeDay(daysOffset) {
+async function changeWeek(daysOffset) {
     currentDate = new Date(currentDate.getTime());
     currentDate.setDate(currentDate.getDate() + daysOffset);
-    updateDateDisplay();
+    updateWeekDisplay();
     await reloadCalendar();
 }
 
-// Set current date to today
-async function setToday() {
+// Set current date to this week
+async function setThisWeek() {
     currentDate = new Date();
-    updateDateDisplay();
+    updateWeekDisplay();
     await reloadCalendar();
 }
 
-// Update the date display
-function updateDateDisplay() {
-    const dateDisplay = document.getElementById('currentDateDisplay');
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const dateString = currentDate.toLocaleDateString('de-DE', options);
-    dateDisplay.textContent = dateString;
+// Update the week display
+function updateWeekDisplay() {
+    const monday = getMondayOfWeek(currentDate);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const dateDisplay = document.getElementById('currentWeekDisplay');
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const mondayString = monday.toLocaleDateString('de-DE', options);
+    const sundayString = sunday.toLocaleDateString('de-DE', options);
+    dateDisplay.textContent = `${mondayString} - ${sundayString}`;
 }
 
-// Reload calendar with current date
+// Reload calendar with current week
 async function reloadCalendar() {
-    await loadEmployers();
-    await loadSessions();
     await loadEvents();
     renderCalendar();
-    renderSessions();
     renderEvents();
     createTimelineElement(); // Recreate timeline element after calendar is re-rendered
     updateTimeline();
@@ -116,62 +135,14 @@ function formatDateForAPI(date) {
     return `${year}-${month}-${day}`;
 }
 
-// Load employers from server
-async function loadEmployers() {
+// Load events from server
+async function loadEvents() {
     const calendarDiv = document.getElementById('calendar');
     
     try {
-        calendarDiv.innerHTML = '<div class="loading">Lade Mitarbeiter...</div>';
-        
-        const response = await fetch('employers_ajax.php');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        employers = data;
-        
-        if (!employers || employers.length === 0) {
-            throw new Error('Keine Mitarbeiter gefunden');
-        }
-        
-    } catch (error) {
-        console.error('Fehler beim Laden der Mitarbeiter:', error);
-        calendarDiv.innerHTML = `<div class="error">Fehler beim Laden der Mitarbeiter: ${error.message}</div>`;
-        // Use sample data for demonstration
-        employers = [
-            { id: 1, name: 'Max Mustermann', department: 'Vertrieb', color: '#4a90e2' },
-            { id: 2, name: 'Anna Schmidt', department: 'Marketing', color: '#e74c3c' },
-            { id: 3, name: 'Peter Weber', department: 'IT', color: '#2ecc71' }
-        ];
-    }
-}
-
-// Load sessions from server
-async function loadSessions() {
-    try {
-        const dateParam = formatDateForAPI(currentDate);
-        const response = await fetch(`session_ajax.php?date=${dateParam}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        sessions = Array.isArray(data) ? data : [];
-        
-    } catch (error) {
-        console.error('Fehler beim Laden der Sessions:', error);
-        sessions = [];
-    }
-}
-
-// Load events from server
-async function loadEvents() {
-    try {
-        const dateParam = formatDateForAPI(currentDate);
-        const response = await fetch(`event_ajax.php?date=${dateParam}`);
+        const monday = getMondayOfWeek(currentDate);
+        const startDateParam = formatDateForAPI(monday);
+        const response = await fetch(`event_week_ajax.php?start_date=${startDateParam}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -191,19 +162,23 @@ function renderCalendar() {
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
     
-    // Calculate all-day section heights for each employer
-    const allDayHeights = calculateAllDayHeights();
+    // Get week dates
+    const monday = getMondayOfWeek(currentDate);
+    const weekDates = getWeekDates(monday);
+    
+    // Calculate all-day section heights for each day
+    const allDayHeights = calculateAllDayHeights(weekDates);
     currentAllDayHeights = allDayHeights; // Cache for later use
     
     // Create left time column
     const timeColumnLeft = createTimeColumn(allDayHeights);
     calendarDiv.appendChild(timeColumnLeft);
     
-    // Create employer columns
-    employers.forEach((employer, index) => {
-        const isLastEmployer = index === employers.length - 1;
-        const employerColumn = createEmployerColumn(employer, isLastEmployer, allDayHeights);
-        calendarDiv.appendChild(employerColumn);
+    // Create day columns
+    weekDates.forEach((date, index) => {
+        const isLastDay = index === weekDates.length - 1;
+        const dayColumn = createDayColumn(date, index, isLastDay, allDayHeights);
+        calendarDiv.appendChild(dayColumn);
     });
     
     // Create right time column
@@ -211,26 +186,27 @@ function renderCalendar() {
     calendarDiv.appendChild(timeColumnRight);
 }
 
-// Helper function to get the current header height (employer header + all-day section)
+// Helper function to get the current header height (day header + all-day section)
 function getHeaderHeight() {
     if (currentAllDayHeights) {
-        return EMPLOYER_HEADER_HEIGHT + currentAllDayHeights.maxHeight;
+        return DAY_HEADER_HEIGHT + currentAllDayHeights.maxHeight;
     }
-    return EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
+    return DAY_HEADER_HEIGHT + ALL_DAY_HEIGHT;
 }
 
-// Calculate the height needed for all-day section for each employer
-function calculateAllDayHeights() {
+// Calculate the height needed for all-day section for each day
+function calculateAllDayHeights(weekDates) {
     const allDayHeights = {};
     let maxAllDayEvents = 0; // Start with 0
     
-    // Group events by employer
-    employers.forEach(employer => {
-        const employerAllDayEvents = events.filter(
-            e => e.employer_id === employer.id && e.is_all_day
+    // Group events by day
+    weekDates.forEach((date, index) => {
+        const dateStr = formatDateForAPI(date);
+        const dayAllDayEvents = events.filter(
+            e => e.date === dateStr && e.is_all_day
         );
-        const count = employerAllDayEvents.length;
-        allDayHeights[employer.id] = count;
+        const count = dayAllDayEvents.length;
+        allDayHeights[index] = count;
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
     });
     
@@ -239,7 +215,7 @@ function calculateAllDayHeights() {
     const calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
     const maxHeight = Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
-    return { perEmployer: allDayHeights, maxHeight: maxHeight };
+    return { perDay: allDayHeights, maxHeight: maxHeight };
 }
 
 // Create time column with hours
@@ -247,10 +223,10 @@ function createTimeColumn(allDayHeights) {
     const column = document.createElement('div');
     column.className = 'time-column';
     
-    // Header (must match employer header + all-day section height)
+    // Header (must match day header + all-day section height)
     const header = document.createElement('div');
     header.className = 'time-header';
-    header.style.height = `${EMPLOYER_HEADER_HEIGHT + allDayHeights.maxHeight}px`;
+    header.style.height = `${DAY_HEADER_HEIGHT + allDayHeights.maxHeight}px`;
     header.textContent = 'Zeit';
     column.appendChild(header);
     
@@ -266,35 +242,51 @@ function createTimeColumn(allDayHeights) {
     return column;
 }
 
-// Create employer column with all-day section and hours
-function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
+// Create day column with all-day section and hours
+function createDayColumn(date, dayIndex, isLastDay = false, allDayHeights) {
     const column = document.createElement('div');
-    column.className = 'employer-column';
-    column.dataset.employerId = employer.id;
+    column.className = 'employer-column'; // Reuse employer-column CSS class
+    column.dataset.dayIndex = dayIndex;
+    column.dataset.date = formatDateForAPI(date);
     
-    // Apply column gap via margin, but not for the last employer
-    if (COLUMN_GAP > 0 && !isLastEmployer) {
+    // Apply column gap via margin, but not for the last day
+    if (COLUMN_GAP > 0 && !isLastDay) {
         column.style.marginRight = `${COLUMN_GAP}px`;
     }
     
-    // Employer name header
+    // Day name header
     const header = document.createElement('div');
-    header.className = 'employer-header';
-    header.style.height = `${EMPLOYER_HEADER_HEIGHT}px`;
-    header.textContent = employer.name;
-    // Apply employer color if available and valid
-    if (employer.color && isValidHexColor(employer.color)) {
-        header.style.backgroundColor = employer.color;
-        // Set contrasting text color for accessibility
-        header.style.color = getContrastingTextColor(employer.color);
+    header.className = 'employer-header'; // Reuse employer-header CSS class
+    header.style.height = `${DAY_HEADER_HEIGHT}px`;
+    
+    // Get day of week
+    const dayOfWeek = DAYS_OF_WEEK[dayIndex];
+    const dayOfMonth = date.getDate();
+    const month = date.getMonth() + 1;
+    
+    // Check if this is today
+    const today = new Date();
+    const isToday = date.getDate() === today.getDate() && 
+                    date.getMonth() === today.getMonth() && 
+                    date.getFullYear() === today.getFullYear();
+    
+    header.textContent = `${dayOfWeek}, ${dayOfMonth}.${month}.`;
+    
+    // Highlight today with a different color
+    if (isToday) {
+        header.style.backgroundColor = '#2ecc71';
+        header.style.color = '#ffffff';
+    } else {
+        header.style.backgroundColor = '#4a90e2';
+        header.style.color = '#ffffff';
     }
+    
     column.appendChild(header);
     
-    // All-day section (use max height across all employers)
+    // All-day section (use max height across all days)
     const allDaySection = document.createElement('div');
     allDaySection.className = 'all-day-section';
     allDaySection.style.height = `${allDayHeights.maxHeight}px`;
-    // Don't set any default text - leave empty when no all-day events
     column.appendChild(allDaySection);
     
     // Hour slots
@@ -313,15 +305,20 @@ function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
 function initializeTimeline() {
     createTimelineElement();
     updateTimeline();
-    // Update timeline and active sessions every 30 seconds
+    // Update timeline every 30 seconds
     setInterval(() => {
         updateTimeline();
-        updateActiveSessions();
     }, 30000);
 }
 
 function createTimelineElement() {
     const calendarGrid = document.getElementById('calendar');
+    
+    // Remove existing timeline if present
+    const existingTimeline = document.getElementById('timeline');
+    if (existingTimeline) {
+        existingTimeline.remove();
+    }
     
     // Create timeline container
     const timelineContainer = document.createElement('div');
@@ -348,8 +345,26 @@ function updateTimeline() {
     const currentMinute = now.getMinutes();
     
     // Check if current time is within calendar hours
-    if (currentHour < START_HOUR || currentHour >= END_HOUR) {
+    if (currentHour < START_HOUR || currentHour > END_HOUR) {
         // Hide timeline if outside calendar hours
+        const timeline = document.getElementById('timeline');
+        if (timeline) {
+            timeline.style.display = 'none';
+        }
+        return;
+    }
+    
+    // Check if today is within the current week
+    const monday = getMondayOfWeek(currentDate);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    
+    if (todayStart < monday || todayStart > sunday) {
+        // Today is not in the current week, hide timeline
         const timeline = document.getElementById('timeline');
         if (timeline) {
             timeline.style.display = 'none';
@@ -384,212 +399,33 @@ function formatTime(hour, minute) {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-// Render session blocks for all employees
-function renderSessions() {
-    sessions.forEach(session => {
-        renderSessionBlock(session);
-    });
-}
-
-// Render a single session block
-function renderSessionBlock(session) {
-    const employerColumn = document.querySelector(`.employer-column[data-employer-id="${session.employer_id}"]`);
-    
-    if (!employerColumn) {
-        console.warn(`Employer column not found for employer_id: ${session.employer_id}`);
-        return;
-    }
-    
-    // Parse login time
-    const [loginHour, loginMinute] = session.login_time.split(':').map(Number);
-    
-    // Calculate if session is currently active (no logout time)
-    const isActive = !session.logout_time || session.logout_time === '';
-    
-    // Parse logout time or use current time for active sessions
-    let logoutHour, logoutMinute;
-    if (isActive) {
-        const now = new Date();
-        logoutHour = now.getHours();
-        logoutMinute = now.getMinutes();
-    } else {
-        [logoutHour, logoutMinute] = session.logout_time.split(':').map(Number);
-    }
-    
-    // Check if session is within visible calendar hours (any overlap)
-    // Session is visible if it ends after START_HOUR and starts before END_HOUR
-    if (logoutHour < START_HOUR || loginHour >= END_HOUR) {
-        return; // Session outside visible hours
-    }
-    
-    // Clamp times to visible range
-    const clampedLoginHour = Math.max(loginHour, START_HOUR);
-    const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
-    const clampedLogoutHour = Math.min(logoutHour, END_HOUR);
-    const clampedLogoutMinute = logoutHour >= END_HOUR ? 0 : logoutMinute;
-    
-    // Calculate position and height
-    const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
-    const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
-    
-    const headerHeight = getHeaderHeight();
-    const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
-    const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
-    
-    // Create session block element
-    const sessionBlock = document.createElement('div');
-    sessionBlock.className = isActive ? 'session-block active-session' : 'session-block';
-    sessionBlock.style.top = `${topPosition}px`;
-    sessionBlock.style.height = `${sessionHeight}px`;
-    sessionBlock.style.left = `${SESSION_PADDING}px`;
-    sessionBlock.style.right = `${SESSION_PADDING}px`;
-    
-    // Format time display
-    const loginTimeStr = formatTime(loginHour, loginMinute);
-    const logoutTimeStr = isActive ? 'jetzt' : formatTime(logoutHour, logoutMinute);
-    
-    sessionBlock.innerHTML = `
-        <div class="session-time">${loginTimeStr}</div>
-        <div class="session-time">${logoutTimeStr}</div>
-    `;
-    
-    // Store session data on the element for updates
-    sessionBlock.dataset.loginTime = loginTimeStr;
-    sessionBlock.dataset.logoutTime = logoutTimeStr;
-    sessionBlock.dataset.isActive = isActive;
-    // Session ID is stored only for active sessions to support future updates
-    if (isActive) {
-        sessionBlock.dataset.sessionId = session.id;
-    }
-    
-    // Add tooltip functionality
-    addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr);
-    
-    employerColumn.appendChild(sessionBlock);
-}
-
-// Update active sessions to reflect current time
-function updateActiveSessions() {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    
-    // Find all active session blocks
-    const activeSessions = document.querySelectorAll('.session-block.active-session');
-    
-    activeSessions.forEach(sessionBlock => {
-        const loginTime = sessionBlock.dataset.loginTime;
-        if (!loginTime) return;
-        
-        const [loginHour, loginMinute] = loginTime.split(':').map(Number);
-        
-        // Check if current time is within visible calendar hours
-        if (currentHour < START_HOUR || currentHour >= END_HOUR) {
-            return; // Don't update if outside calendar hours
-        }
-        
-        // Recalculate position and height with current time
-        const clampedLoginHour = Math.max(loginHour, START_HOUR);
-        const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
-        const clampedLogoutHour = Math.min(currentHour, END_HOUR);
-        const clampedLogoutMinute = currentHour >= END_HOUR ? 0 : currentMinute;
-        
-        const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
-        const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
-        
-        const headerHeight = getHeaderHeight();
-        const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
-        const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
-        
-        // Update the block's position and height
-        sessionBlock.style.top = `${topPosition}px`;
-        sessionBlock.style.height = `${sessionHeight}px`;
-        
-        // Update the logout time display
-        const timeElements = sessionBlock.querySelectorAll('.session-time');
-        if (timeElements.length === 2) {
-            timeElements[1].textContent = 'jetzt';
-        }
-        
-        // Update tooltip data
-        sessionBlock.dataset.logoutTime = 'jetzt';
-    });
-}
-
-// Add tooltip to session block
-function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
-    let tooltip = null;
-    
-    sessionBlock.addEventListener('mouseenter', () => {
-        // Get current tooltip text from dataset
-        const loginTime = sessionBlock.dataset.loginTime;
-        const logoutTime = sessionBlock.dataset.logoutTime;
-        const tooltipText = `${loginTime} bis ${logoutTime}`;
-        
-        // Create tooltip
-        tooltip = document.createElement('div');
-        tooltip.className = 'session-tooltip';
-        tooltip.textContent = tooltipText;
-        document.body.appendChild(tooltip);
-        
-        // Position tooltip near the cursor
-        const rect = sessionBlock.getBoundingClientRect();
-        tooltip.style.left = `${rect.left + rect.width / 2}px`;
-        tooltip.style.top = `${rect.top - 30}px`;
-        tooltip.style.transform = 'translateX(-50%)';
-        
-        // Show tooltip after a brief delay
-        setTimeout(() => {
-            if (tooltip) {
-                tooltip.classList.add('show');
-            }
-        }, 100);
-    });
-    
-    sessionBlock.addEventListener('mouseleave', () => {
-        if (tooltip) {
-            tooltip.remove();
-            tooltip = null;
-        }
-    });
-}
-
-// Render event blocks for all employees
+// Render event blocks for all days
 function renderEvents() {
-    // Group events by employer and type (all-day vs timed)
-    const eventsByEmployer = {};
+    // Group events by day and type (all-day vs timed)
+    const monday = getMondayOfWeek(currentDate);
+    const weekDates = getWeekDates(monday);
     
-    events.forEach(event => {
-        if (!eventsByEmployer[event.employer_id]) {
-            eventsByEmployer[event.employer_id] = {
-                allDay: [],
-                timed: []
-            };
-        }
+    weekDates.forEach((date, dayIndex) => {
+        const dateStr = formatDateForAPI(date);
+        const dayEvents = events.filter(e => e.date === dateStr);
         
-        if (event.is_all_day) {
-            eventsByEmployer[event.employer_id].allDay.push(event);
-        } else {
-            eventsByEmployer[event.employer_id].timed.push(event);
-        }
-    });
-    
-    // Render events for each employer
-    Object.keys(eventsByEmployer).forEach(employerId => {
-        renderAllDayEvents(employerId, eventsByEmployer[employerId].allDay);
-        renderTimedEvents(employerId, eventsByEmployer[employerId].timed);
+        const allDayEvents = dayEvents.filter(e => e.is_all_day);
+        const timedEvents = dayEvents.filter(e => !e.is_all_day);
+        
+        renderAllDayEvents(dayIndex, allDayEvents);
+        renderTimedEvents(dayIndex, timedEvents);
     });
 }
 
 // Render all-day events in the all-day section
-function renderAllDayEvents(employerId, allDayEvents) {
-    const employerColumn = document.querySelector(`.employer-column[data-employer-id="${employerId}"]`);
+function renderAllDayEvents(dayIndex, allDayEvents) {
+    const dayColumn = document.querySelector(`.employer-column[data-day-index="${dayIndex}"]`);
     
-    if (!employerColumn || allDayEvents.length === 0) {
+    if (!dayColumn || allDayEvents.length === 0) {
         return;
     }
     
-    const allDaySection = employerColumn.querySelector('.all-day-section');
+    const allDaySection = dayColumn.querySelector('.all-day-section');
     
     if (!allDaySection) {
         return;
@@ -602,10 +438,9 @@ function renderAllDayEvents(employerId, allDayEvents) {
         eventBlock.style.backgroundColor = event.color;
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
-        // Remove inline width and left styles to let CSS handle margins properly
         eventBlock.textContent = event.title || event.category;
         
-        // Add tooltip
+        // Add tooltip with employee info
         addTooltipToEvent(eventBlock, event);
         
         allDaySection.appendChild(eventBlock);
@@ -613,10 +448,10 @@ function renderAllDayEvents(employerId, allDayEvents) {
 }
 
 // Render timed events in the hour slots
-function renderTimedEvents(employerId, timedEvents) {
-    const employerColumn = document.querySelector(`.employer-column[data-employer-id="${employerId}"]`);
+function renderTimedEvents(dayIndex, timedEvents) {
+    const dayColumn = document.querySelector(`.employer-column[data-day-index="${dayIndex}"]`);
     
-    if (!employerColumn || timedEvents.length === 0) {
+    if (!dayColumn || timedEvents.length === 0) {
         return;
     }
     
@@ -625,7 +460,7 @@ function renderTimedEvents(employerId, timedEvents) {
     
     // Render each group
     eventGroups.forEach(group => {
-        renderEventGroup(employerColumn, group);
+        renderEventGroup(dayColumn, group);
     });
 }
 
@@ -681,17 +516,17 @@ function timeToMinutes(timeStr) {
 }
 
 // Render a group of overlapping events side by side
-function renderEventGroup(employerColumn, eventGroup) {
+function renderEventGroup(dayColumn, eventGroup) {
     const groupSize = eventGroup.length;
     const eventWidth = (100 - (EVENT_PADDING * 2)) / groupSize;
     
     eventGroup.forEach((event, index) => {
-        renderTimedEvent(employerColumn, event, index, groupSize, eventWidth);
+        renderTimedEvent(dayColumn, event, index, groupSize, eventWidth);
     });
 }
 
 // Render a single timed event
-function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, eventWidth) {
+function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWidth) {
     // Parse start and end times
     const [startHour, startMinute] = event.start_time.split(':').map(Number);
     const [endHour, endMinute] = event.end_time.split(':').map(Number);
@@ -734,13 +569,13 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
         <div class="event-time">${timeStr}</div>
     `;
     
-    // Add tooltip
+    // Add tooltip with employee info
     addTooltipToEvent(eventBlock, event);
     
-    employerColumn.appendChild(eventBlock);
+    dayColumn.appendChild(eventBlock);
 }
 
-// Add tooltip to event block
+// Add tooltip to event block with employee info
 function addTooltipToEvent(eventBlock, event) {
     let tooltip = null;
     
@@ -749,7 +584,9 @@ function addTooltipToEvent(eventBlock, event) {
             ? 'Ganztägig' 
             : `${event.start_time} - ${event.end_time}`;
         
-        const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}`;
+        // Include employee name in tooltip
+        const employeeInfo = event.employer_name ? `\nMitarbeiter: ${event.employer_name}` : '';
+        const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}${employeeInfo}`;
         
         // Create tooltip
         tooltip = document.createElement('div');
@@ -779,4 +616,3 @@ function addTooltipToEvent(eventBlock, event) {
         }
     });
 }
-

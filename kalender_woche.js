@@ -345,7 +345,7 @@ function updateTimeline() {
     const currentMinute = now.getMinutes();
     
     // Check if current time is within calendar hours
-    if (currentHour < START_HOUR || currentHour >= END_HOUR) {
+    if (currentHour < START_HOUR || currentHour > END_HOUR) {
         // Hide timeline if outside calendar hours
         const timeline = document.getElementById('timeline');
         if (timeline) {

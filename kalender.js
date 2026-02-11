@@ -87,6 +87,13 @@ function formatDateForAPI(date) {
     return `${year}-${month}-${day}`;
 }
 
+// Check if two dates are on the same day
+function isSameDay(date1, date2) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+}
+
 // Load employers from server
 async function loadEmployers() {
     const calendarDiv = document.getElementById('calendar');
@@ -312,6 +319,18 @@ function updateTimeline() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
+    // Check if we're showing today's date
+    const isToday = isSameDay(currentDate, now);
+    
+    // Only show timeline if we're viewing today
+    if (!isToday) {
+        const timeline = document.getElementById('timeline');
+        if (timeline) {
+            timeline.style.display = 'none';
+        }
+        return;
+    }
+    
     // Check if current time is within calendar hours
     if (currentHour < START_HOUR || currentHour >= END_HOUR) {
         // Hide timeline if outside calendar hours
@@ -332,8 +351,15 @@ function updateTimeline() {
     const topPosition = headerHeight + (totalHoursFraction * HOUR_HEIGHT);
     
     // Update timeline position
-    const timeline = document.getElementById('timeline');
-    const timeIndicator = document.getElementById('timeline-indicator');
+    let timeline = document.getElementById('timeline');
+    let timeIndicator = document.getElementById('timeline-indicator');
+    
+    // Recreate timeline if it doesn't exist (e.g., after calendar re-render)
+    if (!timeline || !timeIndicator) {
+        createTimelineElement();
+        timeline = document.getElementById('timeline');
+        timeIndicator = document.getElementById('timeline-indicator');
+    }
     
     if (timeline && timeIndicator) {
         timeline.style.display = 'block';

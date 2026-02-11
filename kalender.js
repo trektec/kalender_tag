@@ -6,7 +6,7 @@ const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section
 const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
 const ALL_DAY_BOTTOM_SPACING = 10; // Adjustable spacing after the last all-day entry in pixels
 const COLUMN_GAP = 0; // Gap between columns in pixels
-const EMPLOYER_HEADER_HEIGHT = 60; // Height of employer name header in pixels
+const EMPLOYER_HEADER_HEIGHT = 40; // Height of employer name header in pixels
 const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
 const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in pixels
 

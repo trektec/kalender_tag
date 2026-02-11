@@ -8,6 +8,9 @@ header('Content-Type: application/json');
 // 3. Retrieve data from a secure database instead of hardcoded arrays
 // 4. Validate and sanitize any input parameters (e.g., date filters)
 
+// Get date parameter from query string, default to today
+$requestedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
+
 // Sample event data for employees
 // In a real application, this would come from a database
 // Structure: id, employer_id, date, start_time, end_time, category, color, is_all_day, title
@@ -198,5 +201,13 @@ $events = [
     ]
 ];
 
-echo json_encode($events);
+// Filter events by requested date
+$filteredEvents = array_filter($events, function($event) use ($requestedDate) {
+    return $event['date'] === $requestedDate;
+});
+
+// Re-index the array to ensure proper JSON encoding
+$filteredEvents = array_values($filteredEvents);
+
+echo json_encode($filteredEvents);
 ?>

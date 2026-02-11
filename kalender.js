@@ -15,9 +15,12 @@ let employers = [];
 let sessions = [];
 let events = [];
 let currentAllDayHeights = null; // Cache for all-day heights
+let currentDate = new Date(); // Current selected date
 
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    setupNavigationHandlers();
+    updateDateDisplay();
     await loadEmployers();
     await loadSessions();
     await loadEvents();
@@ -26,6 +29,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderEvents();
     initializeTimeline();
 });
+
+// Setup navigation button handlers
+function setupNavigationHandlers() {
+    document.getElementById('prevDayBtn').addEventListener('click', () => {
+        changeDay(-1);
+    });
+    
+    document.getElementById('todayBtn').addEventListener('click', () => {
+        setToday();
+    });
+    
+    document.getElementById('nextDayBtn').addEventListener('click', () => {
+        changeDay(1);
+    });
+}
+
+// Change current date by days offset
+async function changeDay(daysOffset) {
+    currentDate.setDate(currentDate.getDate() + daysOffset);
+    updateDateDisplay();
+    await reloadCalendar();
+}
+
+// Set current date to today
+async function setToday() {
+    currentDate = new Date();
+    updateDateDisplay();
+    await reloadCalendar();
+}
+
+// Update the date display
+function updateDateDisplay() {
+    const dateDisplay = document.getElementById('currentDateDisplay');
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const dateString = currentDate.toLocaleDateString('de-DE', options);
+    dateDisplay.textContent = dateString;
+}
+
+// Reload calendar with current date
+async function reloadCalendar() {
+    await loadEmployers();
+    await loadSessions();
+    await loadEvents();
+    renderCalendar();
+    renderSessions();
+    renderEvents();
+    updateTimeline();
+}
+
+// Format date for API calls (YYYY-MM-DD)
+function formatDateForAPI(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 // Load employers from server
 async function loadEmployers() {
@@ -62,7 +121,8 @@ async function loadEmployers() {
 // Load sessions from server
 async function loadSessions() {
     try {
-        const response = await fetch('session_ajax.php');
+        const dateParam = formatDateForAPI(currentDate);
+        const response = await fetch(`session_ajax.php?date=${dateParam}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -80,7 +140,8 @@ async function loadSessions() {
 // Load events from server
 async function loadEvents() {
     try {
-        const response = await fetch('event_ajax.php');
+        const dateParam = formatDateForAPI(currentDate);
+        const response = await fetch(`event_ajax.php?date=${dateParam}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

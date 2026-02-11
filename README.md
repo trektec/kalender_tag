@@ -1,9 +1,18 @@
 # kalender_tag
 
-Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarbeiter von 6:00 bis 18:00 Uhr.
+Flexible Kalenderansichten für Mitarbeiter und Termine von 6:00 bis 18:00 Uhr.
+
+## Kalenderansichten
+
+### Tageskalender (Day Calendar)
+Ein flexibler Stundenkalender mit Spalten für mehrere Mitarbeiter.
+
+### Wochenkalender (Week Calendar)
+Eine Wochenübersicht von Montag bis Sonntag mit Tages-Spalten für alle Events.
 
 ## Features
 
+### Tageskalender Features
 - **Stundenbereich**: 6:00 Uhr bis 18:00 Uhr
 - **Mehrere Mitarbeiter**: Zeigt mehrere Mitarbeiter in Spalten nebeneinander an
 - **Einstellbare Stundenhöhe**: Höhe der Stundeneinteilung über einen Schieberegler anpassbar (30-120px)
@@ -18,6 +27,14 @@ Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarb
   - Einstellbare Breite über `EVENT_PADDING` Konfiguration
   - Tooltips mit Termindetails
 
+### Wochenkalender Features
+- **Wochenübersicht**: Montag bis Sonntag in Spalten
+- **Ganztags- und normale Events**: Nur Events werden angezeigt (keine Sessions, keine Mitarbeiter-Spalten)
+- **Mitarbeiter-Info in Tooltips**: Beim Hover über ein Event wird der zuständige Mitarbeiter angezeigt
+- **Wochennavigation**: Vorherige Woche / Diese Woche / Nächste Woche
+- **Gleiches Design**: Verwendet das gleiche CSS wie der Tageskalender
+- **AJAX Datenabruf**: Events werden von `event_week_ajax.php` geladen
+
 ## Installation & Verwendung
 
 1. Stellen Sie sicher, dass PHP installiert ist
@@ -25,16 +42,26 @@ Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarb
    ```bash
    php -S localhost:8080
    ```
-3. Öffnen Sie im Browser: `http://localhost:8080/kalender_tag.html`
+3. Öffnen Sie im Browser:
+   - Tageskalender: `http://localhost:8080/kalender_tag.html`
+   - Wochenkalender: `http://localhost:8080/kalender_woche.html`
 
 ## Dateien
 
-- `kalender_tag.html` - Hauptseite mit Tageskalenderansicht
-- `kalender_tag.css` - Styling für den Kalender
-- `kalender.js` - JavaScript-Logik (Datenabruf, Rendering, Stundenhöhe)
+### Tageskalender
+- `kalender_tag.html` - HTML für Tageskalenderansicht
+- `kalender_tag.js` - JavaScript-Logik für Tageskalender
 - `employers_ajax.php` - Backend-Endpunkt für Mitarbeiterdaten
 - `session_ajax.php` - Backend-Endpunkt für Session-Daten (Anwesenheitszeiten)
-- `event_ajax.php` - Backend-Endpunkt für Event-Daten (Termine)
+- `event_ajax.php` - Backend-Endpunkt für Event-Daten (Tagesansicht)
+
+### Wochenkalender
+- `kalender_woche.html` - HTML für Wochenkalenderansicht
+- `kalender_woche.js` - JavaScript-Logik für Wochenkalender
+- `event_week_ajax.php` - Backend-Endpunkt für Event-Daten (Wochenansicht)
+
+### Gemeinsame Dateien
+- `kalender_tag.css` - Styling für beide Kalender
 
 ## Anpassung
 

@@ -77,11 +77,13 @@ Bearbeiten Sie `employers_ajax.php` und passen Sie das `$employers` Array an:
 
 ```php
 $employers = [
-    ['id' => 1, 'name' => 'Max Mustermann'],
-    ['id' => 2, 'name' => 'Anna Schmidt'],
+    ['id' => 1, 'name' => 'Max Mustermann', 'department' => 'Vertrieb', 'color' => '#4a90e2'],
+    ['id' => 2, 'name' => 'Anna Schmidt', 'department' => 'Marketing', 'color' => '#e74c3c'],
     // Weitere Mitarbeiter hinzufügen...
 ];
 ```
+
+**Hinweis:** Die `color` Eigenschaft bestimmt die Hintergrundfarbe des Mitarbeiter-Headers und kann je nach Abteilung (`department`) angepasst werden.
 
 ### Events ändern
 

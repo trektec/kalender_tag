@@ -112,9 +112,9 @@ async function loadEmployers() {
         calendarDiv.innerHTML = `<div class="error">Fehler beim Laden der Mitarbeiter: ${error.message}</div>`;
         // Use sample data for demonstration
         employers = [
-            { id: 1, name: 'Max Mustermann' },
-            { id: 2, name: 'Anna Schmidt' },
-            { id: 3, name: 'Peter Weber' }
+            { id: 1, name: 'Max Mustermann', department: 'Vertrieb', color: '#4a90e2' },
+            { id: 2, name: 'Anna Schmidt', department: 'Marketing', color: '#e74c3c' },
+            { id: 3, name: 'Peter Weber', department: 'IT', color: '#2ecc71' }
         ];
     }
 }
@@ -253,6 +253,10 @@ function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
     header.className = 'employer-header';
     header.style.height = `${EMPLOYER_HEADER_HEIGHT}px`;
     header.textContent = employer.name;
+    // Apply employer color if available
+    if (employer.color) {
+        header.style.backgroundColor = employer.color;
+    }
     column.appendChild(header);
     
     // All-day section (use max height across all employers)

@@ -104,6 +104,7 @@ async function reloadCalendar() {
     renderCalendar();
     renderSessions();
     renderEvents();
+    createTimelineElement(); // Recreate timeline element after calendar is re-rendered
     updateTimeline();
 }
 

@@ -235,20 +235,14 @@ function calculateAllDayHeights() {
     });
     
     // Calculate the total height needed
+    // Account for each event height plus bottom spacing
+    const calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
+    
     // When there are 3 or more events, don't constrain by ALL_DAY_HEIGHT minimum
     // to ensure nothing is cut off and there's proper spacing
-    let calculatedHeight;
-    if (maxAllDayEvents >= 3) {
-        // For 3+ events: use full calculated height without minimum constraint
-        // Account for each event height plus bottom spacing
-        calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
-    } else {
-        // For 0-2 events: use at least ALL_DAY_HEIGHT as minimum
-        calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
-        calculatedHeight = Math.max(ALL_DAY_HEIGHT, calculatedHeight);
-    }
+    const maxHeight = maxAllDayEvents >= 3 ? calculatedHeight : Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
-    return { perEmployer: allDayHeights, maxHeight: calculatedHeight };
+    return { perEmployer: allDayHeights, maxHeight: maxHeight };
 }
 
 // Create time column with hours

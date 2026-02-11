@@ -51,7 +51,7 @@ const ALL_DAY_HEIGHT = 60;           // Minimale Höhe des Ganztagstermin-Bereic
 const ALL_DAY_EVENT_HEIGHT = 30;     // Höhe jedes einzelnen Ganztags-Events in Pixeln (Standard: 30)
 const ALL_DAY_BOTTOM_SPACING = 10;   // Einstellbarer Abstand nach dem letzten Ganztags-Event in Pixeln (Standard: 10)
 const COLUMN_GAP = 0;                // Abstand zwischen den Spalten in Pixeln (Standard: 0)
-const EMPLOYER_HEADER_HEIGHT = 60;   // Höhe der Mitarbeiter-Kopfzeile in Pixeln (Standard: 60)
+const EMPLOYER_HEADER_HEIGHT = 40;   // Höhe der Mitarbeiter-Kopfzeile in Pixeln (Standard: 40)
 const SESSION_PADDING = 5;           // Abstand der Session-Blöcke von den Spaltenrändern in Pixeln (Standard: 5)
 const EVENT_PADDING = 2;             // Abstand der Event-Blöcke von den Spaltenrändern in Pixeln (Standard: 2)
 ```

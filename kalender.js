@@ -25,9 +25,9 @@ function isValidHexColor(color) {
 // Helper function to calculate luminance of a color
 function getLuminance(hexColor) {
     // Convert hex to RGB
-    const r = parseInt(hexColor.substr(1, 2), 16) / 255;
-    const g = parseInt(hexColor.substr(3, 2), 16) / 255;
-    const b = parseInt(hexColor.substr(5, 2), 16) / 255;
+    const r = parseInt(hexColor.substring(1, 3), 16) / 255;
+    const g = parseInt(hexColor.substring(3, 5), 16) / 255;
+    const b = parseInt(hexColor.substring(5, 7), 16) / 255;
     
     // Apply gamma correction
     const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);

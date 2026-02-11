@@ -21,8 +21,62 @@ body {
 
 h1 {
     text-align: center;
-    margin-bottom: 20px;
     color: #333;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.date-navigation {
+    display: flex;
+    gap: 8px;
+}
+
+.nav-btn {
+    padding: 8px 16px;
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.nav-btn:hover {
+    background-color: #357abd;
+}
+
+.nav-btn:active {
+    background-color: #2a5fa0;
+}
+
+.today-btn {
+    background-color: #2ecc71;
+}
+
+.today-btn:hover {
+    background-color: #27ae60;
+}
+
+.today-btn:active {
+    background-color: #229954;
+}
+
+.current-date {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+    padding: 8px;
+    background-color: #f0f8ff;
+    border-radius: 4px;
 }
 
 .calendar-grid {

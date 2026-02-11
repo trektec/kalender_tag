@@ -8,7 +8,15 @@
 </head>
 <body>
     <div class="calendar-container">
-        <h1>Tageskalender</h1>
+        <div class="header-container">
+            <h1>Tageskalender</h1>
+            <div class="date-navigation">
+                <button id="prevDayBtn" class="nav-btn" title="Vorheriger Tag">◄</button>
+                <button id="todayBtn" class="nav-btn today-btn" title="Heute">Heute</button>
+                <button id="nextDayBtn" class="nav-btn" title="Nächster Tag">►</button>
+            </div>
+        </div>
+        <div id="currentDateDisplay" class="current-date"></div>
         <div id="calendar" class="calendar-grid"></div>
     </div>
     <script src="kalender.js"></script>

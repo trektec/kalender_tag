@@ -8,6 +8,20 @@ header('Content-Type: application/json');
 // 3. Retrieve data from a secure database instead of hardcoded arrays
 // 4. Validate and sanitize any input parameters (e.g., date filters)
 
+// Get date parameter from query string, default to today
+$requestedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
+
+// Validate date format (YYYY-MM-DD)
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedDate)) {
+    $requestedDate = date('Y-m-d');
+}
+
+// Verify it's a valid date
+$dateTime = DateTime::createFromFormat('Y-m-d', $requestedDate);
+if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
+    $requestedDate = date('Y-m-d');
+}
+
 // Sample session data for employees
 // In a real application, this would come from a database
 // Structure: id, employer_id, date, login_time, logout_time
@@ -64,5 +78,13 @@ $sessions = [
     ]
 ];
 
-echo json_encode($sessions);
+// Filter sessions by requested date
+$filteredSessions = array_filter($sessions, function($session) use ($requestedDate) {
+    return $session['date'] === $requestedDate;
+});
+
+// Re-index the array to ensure proper JSON encoding
+$filteredSessions = array_values($filteredSessions);
+
+echo json_encode($filteredSessions);
 ?>

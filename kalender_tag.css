@@ -345,5 +345,5 @@ h1 {
     color: #666;
     display: block;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }

@@ -5,6 +5,7 @@ const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
 const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section in pixels
 const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
 const ALL_DAY_BOTTOM_SPACING = 10; // Adjustable spacing after the last all-day entry in pixels
+const MIN_EVENTS_FOR_DYNAMIC_HEIGHT = 3; // Minimum number of all-day events to use dynamic height without minimum constraint
 const COLUMN_GAP = 0; // Gap between columns in pixels
 const EMPLOYER_HEADER_HEIGHT = 40; // Height of employer name header in pixels
 const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
@@ -238,9 +239,9 @@ function calculateAllDayHeights() {
     // Account for each event height plus bottom spacing
     const calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
     
-    // When there are 3 or more events, don't constrain by ALL_DAY_HEIGHT minimum
+    // When there are MIN_EVENTS_FOR_DYNAMIC_HEIGHT or more events, don't constrain by ALL_DAY_HEIGHT minimum
     // to ensure nothing is cut off and there's proper spacing
-    const maxHeight = maxAllDayEvents >= 3 ? calculatedHeight : Math.max(ALL_DAY_HEIGHT, calculatedHeight);
+    const maxHeight = maxAllDayEvents >= MIN_EVENTS_FOR_DYNAMIC_HEIGHT ? calculatedHeight : Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
     return { perEmployer: allDayHeights, maxHeight: maxHeight };
 }

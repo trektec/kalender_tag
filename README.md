@@ -65,6 +65,25 @@ Eine Wochenübersicht von Montag bis Sonntag mit Tages-Spalten für alle Events.
 
 ## Anpassung
 
+### Kalenderbreite einstellen
+
+Die Gesamtbreite des Kalenders kann über die CSS-Variable `--calendar-width` angepasst werden. 
+Bearbeiten Sie den `<style>` Bereich in den HTML-Dateien (`kalender_tag.html` oder `kalender_woche.html`):
+
+```css
+:root {
+    --calendar-width: 100%;  /* Standard: 100% der Browserbreite */
+}
+```
+
+**Beispiele:**
+- Für feste Breite: `--calendar-width: 1200px;`
+- Für 80% der Browserbreite: `--calendar-width: 80%;`
+- Für volle Breite ohne Rand: `--calendar-width: 100%;` (Standard)
+
+**Wichtig:** Der Kalender ist so gestaltet, dass er ohne Bildlaufleisten funktioniert. 
+Alle Inhalte passen sich automatisch an die eingestellte Breite an.
+
 ### Kalender-Einstellungen
 
 Alle Einstellungen werden direkt im JavaScript-Code in der Datei `kalender.js` vorgenommen. Öffnen Sie die Datei und passen Sie die Konfigurationsvariablen am Anfang an:

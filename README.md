@@ -25,12 +25,12 @@ Tageskalender (Day Calendar) - Ein flexibler Stundenkalender für mehrere Mitarb
    ```bash
    php -S localhost:8080
    ```
-3. Öffnen Sie im Browser: `http://localhost:8080/index.html`
+3. Öffnen Sie im Browser: `http://localhost:8080/kalender_tag.html`
 
 ## Dateien
 
-- `index.html` - Hauptseite mit Kalenderansicht
-- `style.css` - Styling für den Kalender
+- `kalender_tag.html` - Hauptseite mit Tageskalenderansicht
+- `kalender_tag.css` - Styling für den Kalender
 - `kalender.js` - JavaScript-Logik (Datenabruf, Rendering, Stundenhöhe)
 - `employers_ajax.php` - Backend-Endpunkt für Mitarbeiterdaten
 - `session_ajax.php` - Backend-Endpunkt für Session-Daten (Anwesenheitszeiten)

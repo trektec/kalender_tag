@@ -17,6 +17,34 @@ let events = [];
 let currentAllDayHeights = null; // Cache for all-day heights
 let currentDate = new Date(); // Current selected date
 
+// Helper function to validate hex color format
+function isValidHexColor(color) {
+    return /^#[0-9A-Fa-f]{6}$/.test(color);
+}
+
+// Helper function to calculate luminance of a color
+function getLuminance(hexColor) {
+    // Convert hex to RGB
+    const r = parseInt(hexColor.substring(1, 3), 16) / 255;
+    const g = parseInt(hexColor.substring(3, 5), 16) / 255;
+    const b = parseInt(hexColor.substring(5, 7), 16) / 255;
+    
+    // Apply gamma correction
+    const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+    const gsRGB = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+    const bsRGB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+    
+    // Calculate luminance
+    return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
+}
+
+// Helper function to get contrasting text color (white or black)
+function getContrastingTextColor(hexColor) {
+    const luminance = getLuminance(hexColor);
+    // Use white text for dark backgrounds, black text for light backgrounds
+    return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
 // Initialize calendar on page load
 document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
@@ -112,9 +140,9 @@ async function loadEmployers() {
         calendarDiv.innerHTML = `<div class="error">Fehler beim Laden der Mitarbeiter: ${error.message}</div>`;
         // Use sample data for demonstration
         employers = [
-            { id: 1, name: 'Max Mustermann' },
-            { id: 2, name: 'Anna Schmidt' },
-            { id: 3, name: 'Peter Weber' }
+            { id: 1, name: 'Max Mustermann', department: 'Vertrieb', color: '#4a90e2' },
+            { id: 2, name: 'Anna Schmidt', department: 'Marketing', color: '#e74c3c' },
+            { id: 3, name: 'Peter Weber', department: 'IT', color: '#2ecc71' }
         ];
     }
 }
@@ -253,6 +281,12 @@ function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
     header.className = 'employer-header';
     header.style.height = `${EMPLOYER_HEADER_HEIGHT}px`;
     header.textContent = employer.name;
+    // Apply employer color if available and valid
+    if (employer.color && isValidHexColor(employer.color)) {
+        header.style.backgroundColor = employer.color;
+        // Set contrasting text color for accessibility
+        header.style.color = getContrastingTextColor(employer.color);
+    }
     column.appendChild(header);
     
     // All-day section (use max height across all employers)

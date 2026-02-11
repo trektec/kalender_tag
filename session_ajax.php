@@ -11,6 +11,17 @@ header('Content-Type: application/json');
 // Get date parameter from query string, default to today
 $requestedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
+// Validate date format (YYYY-MM-DD)
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedDate)) {
+    $requestedDate = date('Y-m-d');
+}
+
+// Verify it's a valid date
+$dateTime = DateTime::createFromFormat('Y-m-d', $requestedDate);
+if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
+    $requestedDate = date('Y-m-d');
+}
+
 // Sample session data for employees
 // In a real application, this would come from a database
 // Structure: id, employer_id, date, login_time, logout_time

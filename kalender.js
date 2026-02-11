@@ -47,6 +47,7 @@ function setupNavigationHandlers() {
 
 // Change current date by days offset
 async function changeDay(daysOffset) {
+    currentDate = new Date(currentDate.getTime());
     currentDate.setDate(currentDate.getDate() + daysOffset);
     updateDateDisplay();
     await reloadCalendar();

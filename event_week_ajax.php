@@ -146,6 +146,30 @@ $baseEvents = [
         'is_all_day' => true,
         'title' => 'All-Day Meeting'
     ],
+    [
+        'id' => 15,
+        'employer_id' => 3,
+        'employer_name' => 'Peter Weber',
+        'date' => date('Y-m-d', strtotime('+3 days')),
+        'start_time' => '',
+        'end_time' => '',
+        'category' => 'training',
+        'color' => '#9b59b6',
+        'is_all_day' => true,
+        'title' => 'Training'
+    ],
+    [
+        'id' => 16,
+        'employer_id' => 3,
+        'employer_name' => 'Peter Weber',
+        'date' => date('Y-m-d', strtotime('+3 days')),
+        'start_time' => '',
+        'end_time' => '',
+        'category' => 'workshop',
+        'color' => '#e74c3c',
+        'is_all_day' => true,
+        'title' => 'Team Building'
+    ],
     
     // Julia Müller (employer_id: 4)
     [

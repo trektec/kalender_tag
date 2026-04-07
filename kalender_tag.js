@@ -5,7 +5,6 @@ const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
 const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section in pixels
 const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
 const ALL_DAY_BOTTOM_SPACING = 10; // Adjustable spacing after the last all-day entry in pixels
-const MIN_EVENTS_FOR_DYNAMIC_HEIGHT = 3; // Minimum number of all-day events to use dynamic height without minimum constraint
 const COLUMN_GAP = 0; // Gap between columns in pixels
 const EMPLOYER_HEADER_HEIGHT = 40; // Height of employer name header in pixels
 const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
@@ -228,20 +227,18 @@ function calculateAllDayHeights() {
     // Group events by employer
     employers.forEach(employer => {
         const employerAllDayEvents = events.filter(
-            e => e.employer_id === employer.id && e.is_all_day
+            // Use String() conversion for type-safe comparison (DB may return string IDs)
+            e => String(e.employer_id) === String(employer.id) && e.is_all_day
         );
         const count = employerAllDayEvents.length;
         allDayHeights[employer.id] = count;
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
     });
     
-    // Calculate the total height needed
-    // Account for each event height plus bottom spacing
+    // Calculate the total height needed: each event height plus bottom spacing,
+    // with a minimum of ALL_DAY_HEIGHT so the section is never too small
     const calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
-    
-    // When there are MIN_EVENTS_FOR_DYNAMIC_HEIGHT or more events, don't constrain by ALL_DAY_HEIGHT minimum
-    // to ensure nothing is cut off and there's proper spacing
-    const maxHeight = maxAllDayEvents >= MIN_EVENTS_FOR_DYNAMIC_HEIGHT ? calculatedHeight : Math.max(ALL_DAY_HEIGHT, calculatedHeight);
+    const maxHeight = Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
     return { perEmployer: allDayHeights, maxHeight: maxHeight };
 }

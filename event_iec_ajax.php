@@ -2,40 +2,45 @@
 header('Content-Type: application/json');
 
 // ============================================================
-// event_iec_ajax.php – AJAX endpoint for calendar events
+// event_iec_ajax.php – AJAX-Endpunkt für Kalender-Termine
 // ============================================================
-// DEMO MODE (default):
-//   Events are stored in a hardcoded in-memory array.
-//   All write operations (create / edit / delete) are validated
-//   and return success, but no data is actually persisted.
+// DEMO-MODUS (Standard):
+//   Termine werden in einem fest codierten In-Memory-Array gespeichert.
+//   Alle Schreibvorgänge (Erstellen / Bearbeiten / Löschen) werden
+//   validiert und geben Erfolg zurück, aber nichts wird tatsächlich
+//   in einer Datenbank gespeichert.
 //
-// PRODUCTION MODE:
-//   1. Set up your database and run the CREATE TABLE statement
-//      found in event_iec_db.php.
-//   2. Fill in the DB_* constants in event_iec_db.php.
-//   3. Uncomment the require_once line below.
-//   4. Replace the three "// Demo mode:" blocks in this file
-//      with the corresponding "// Production:" alternatives.
+// PRODUKTIONSMODUS:
+//   1. Datenbank anlegen und das CREATE TABLE-Statement aus
+//      event_iec_db.php einmalig ausführen.
+//   2. DB_HOST, DB_USER, DB_PASS und DB_NAME in event_iec_db.php
+//      auf deine Zugangsdaten anpassen.
+//   3. Die require_once-Zeile direkt unterhalb einkommentieren
+//      (das Semikolon vor "require_once" entfernen).
+//   4. Die vier mit "// Demo-Modus:" markierten Blöcke in dieser
+//      Datei durch den jeweils danebenstehenden "// Produktionsmodus:"-
+//      Code ersetzen (Kommentarzeichen "//" entfernen).
 // ============================================================
 
-// require_once 'event_iec_db.php';
+// require_once 'event_iec_db.php'; // <-- Zeile einkommentieren für Produktionsmodus
 
-// NOTE: In a production environment you should also:
-//   - Verify a valid session before processing any request.
-//   - Check that the acting user has permission to modify the
-//     targeted event (event.user_id == session user OR superuser).
+// HINWEIS FÜR DIE PRODUKTIONSUMGEBUNG:
+//   - Prüfe vor jeder Anfrage, ob eine gültige Session vorhanden ist.
+//   - Stelle sicher, dass der angemeldete Nutzer berechtigt ist,
+//     den jeweiligen Termin zu ändern (event.user_id == Session-User
+//     oder Administratorrechte).
 
 // ============================================================
-// POST – write actions (create / edit / delete)
+// POST – Schreibaktionen (Erstellen / Bearbeiten / Löschen)
 // ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? trim($_POST['action']) : '';
 
     // ----------------------------------------------------------
-    // CREATE a new event
+    // TERMIN ERSTELLEN
     // ----------------------------------------------------------
     if ($action === 'create') {
-        // --- Validate required fields ---
+        // --- Pflichtfelder validieren ---
         $employerId = isset($_POST['employer_id']) ? $_POST['employer_id'] : '';
         $userId     = isset($_POST['user_id'])     ? $_POST['user_id']     : '1';
         $date       = isset($_POST['date'])        ? trim($_POST['date'])  : '';
@@ -101,8 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'title'       => $title,
         ];
 
-        // Demo mode: generate a temporary ID and return the new event object.
-        // Production: $newId = dbCreateEvent($eventData);
+        // Demo-Modus: Temporäre ID generieren und neues Termin-Objekt zurückgeben.
+        // Produktionsmodus: $newId = dbCreateEvent($eventData);
         $newId = (int)(microtime(true) * 1000) % 999000 + 1000;
 
         $newEvent = array_merge(['id' => $newId], $eventData);
@@ -112,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ----------------------------------------------------------
-    // EDIT (update) an existing event
+    // TERMIN BEARBEITEN (aktualisieren)
     // ----------------------------------------------------------
     if ($action === 'edit') {
         $eventId   = isset($_POST['event_id'])    ? $_POST['event_id']       : '';
@@ -165,22 +170,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $eventId = (int)$eventId;
 
-        // Demo mode: In a real application the record would be updated in the database.
-        // Production:
-        // $updateData = [
+        // Demo-Modus: Kein Datenbankaufruf; der Termin wird nur im Arbeitsspeicher simuliert.
+        // Produktionsmodus – folgende Zeilen einkommentieren:
+        // dbUpdateEvent($eventId, [
         //     'date'       => $date,       'start_time' => $startTime,
         //     'end_time'   => $endTime,    'category'   => $category,
         //     'color'      => $color,      'is_all_day' => $isAllDay,
         //     'title'      => $title,
-        // ];
-        // dbUpdateEvent($eventId, $updateData);
+        // ]);
 
         echo json_encode(['success' => true]);
         exit;
     }
 
     // ----------------------------------------------------------
-    // DELETE an event
+    // TERMIN LÖSCHEN
     // ----------------------------------------------------------
     if ($action === 'delete') {
         $eventId = isset($_POST['event_id']) ? $_POST['event_id'] : '';
@@ -193,8 +197,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $eventId = (int)$eventId;
 
-        // Demo mode: In a real application the record would be soft-deleted in the database.
-        // Production: dbDeleteEvent($eventId);
+        // Demo-Modus: Kein Datenbankaufruf; der Termin wird nur im Arbeitsspeicher simuliert.
+        // Produktionsmodus: dbDeleteEvent($eventId);
 
         echo json_encode(['success' => true]);
         exit;
@@ -206,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ============================================================
-// GET – return events for the requested date
+// GET – Termine für das angeforderte Datum zurückgeben
 // ============================================================
 $requestedDate = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 
@@ -220,12 +224,14 @@ if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
     $requestedDate = date('Y-m-d');
 }
 
-// Production: echo json_encode(dbGetEvents($requestedDate)); exit;
+// Produktionsmodus: Folgende Zeile einkommentieren, Demo-$events-Block darunter entfernen:
+// echo json_encode(dbGetEvents($requestedDate)); exit;
 
 // ============================================================
-// Demo data
-// Structure: id, employer_id, user_id, date, start_time,
-//            end_time, category, color, is_all_day, title
+// Demo-Daten (nur im Demo-Modus aktiv)
+// Struktur: id, employer_id, user_id, date, start_time,
+//           end_time, category, color, is_all_day, title
+// Im Produktionsmodus wird dieser Block nicht benötigt.
 // ============================================================
 $events = [
     // Max Mustermann (employer_id: 1)

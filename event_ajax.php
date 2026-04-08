@@ -8,6 +8,78 @@ header('Content-Type: application/json');
 // 3. Retrieve data from a secure database instead of hardcoded arrays
 // 4. Validate and sanitize any input parameters (e.g., date filters)
 
+$method = $_SERVER['REQUEST_METHOD'];
+
+// ── DELETE: remove an event by ID ────────────────────────────────────────────
+if ($method === 'DELETE') {
+    // The event ID can be passed as a query string parameter: ?id=<id>
+    $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Ungültige Event-ID.']);
+        exit;
+    }
+
+    // In a real application you would DELETE the record from the database here.
+    // For this demo we simply confirm success.
+    echo json_encode(['success' => true, 'id' => $id]);
+    exit;
+}
+
+// ── POST: update (edit) an existing event ────────────────────────────────────
+if ($method === 'POST') {
+    $body = file_get_contents('php://input');
+    $data = json_decode($body, true);
+
+    if (!$data || !isset($data['id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Ungültige oder fehlende Daten.']);
+        exit;
+    }
+
+    $id        = (int) $data['id'];
+    $title     = isset($data['title'])      ? trim($data['title'])    : '';
+    $category  = isset($data['category'])   ? trim($data['category']) : '';
+    $color     = isset($data['color'])      ? trim($data['color'])    : '#4a90e2';
+    $isAllDay  = isset($data['is_all_day']) ? (bool) $data['is_all_day'] : false;
+    $startTime = isset($data['start_time']) ? trim($data['start_time']) : '';
+    $endTime   = isset($data['end_time'])   ? trim($data['end_time'])   : '';
+
+    // Basic validation
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Ungültige Event-ID.']);
+        exit;
+    }
+    if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+        $color = '#4a90e2';
+    }
+    if (!$isAllDay && (!preg_match('/^\d{2}:\d{2}$/', $startTime) || !preg_match('/^\d{2}:\d{2}$/', $endTime))) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Bitte Start- und Endzeit angeben.']);
+        exit;
+    }
+
+    // In a real application you would UPDATE the record in the database here.
+    // For this demo we echo back the updated event data.
+    echo json_encode([
+        'success'    => true,
+        'event'      => [
+            'id'         => $id,
+            'title'      => $title,
+            'category'   => $category,
+            'color'      => $color,
+            'is_all_day' => $isAllDay,
+            'start_time' => $isAllDay ? '' : $startTime,
+            'end_time'   => $isAllDay ? '' : $endTime,
+        ]
+    ]);
+    exit;
+}
+
+// ── GET: list events for a date ───────────────────────────────────────────────
+
 // Get date parameter from query string, default to today
 $requestedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 

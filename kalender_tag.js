@@ -841,8 +841,8 @@ function toggleTimeFields(show) {
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
 }
 
-// Save changes from the edit modal back into the events array and re-render
-function saveEventFromModal() {
+// Save changes from the edit modal – sends the update to the server via POST
+async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
     const title = document.getElementById('editEventTitle').value.trim();
     const category = document.getElementById('editEventCategory').value.trim();
@@ -857,24 +857,98 @@ function saveEventFromModal() {
         return;
     }
 
-    // Find and update the event in the events array
-    const eventIndex = events.findIndex(e => String(e.id) === String(id));
-    if (eventIndex !== -1) {
-        events[eventIndex] = {
-            ...events[eventIndex],
-            title,
-            category,
-            color,
-            is_all_day: isAllDay,
-            start_time: isAllDay ? '' : startTime,
-            end_time: isAllDay ? '' : endTime
-        };
+    const payload = {
+        id,
+        title,
+        category,
+        color,
+        is_all_day: isAllDay,
+        start_time: isAllDay ? '' : startTime,
+        end_time:   isAllDay ? '' : endTime
+    };
+
+    try {
+        const response = await fetch('event_ajax.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert('Fehler beim Speichern: ' + (result.error || 'Unbekannter Fehler'));
+            return;
+        }
+
+        // Update the local events array with the returned data
+        const updated = result.event;
+        const eventIndex = events.findIndex(e => String(e.id) === String(updated.id));
+        if (eventIndex !== -1) {
+            events[eventIndex] = { ...events[eventIndex], ...updated };
+        }
+    } catch (error) {
+        console.error('Fehler beim Speichern des Events:', error);
+        // Fall back to local-only update so the UI still reflects the change
+        const eventIndex = events.findIndex(e => String(e.id) === String(id));
+        if (eventIndex !== -1) {
+            events[eventIndex] = {
+                ...events[eventIndex],
+                title,
+                category,
+                color,
+                is_all_day: isAllDay,
+                start_time: isAllDay ? '' : startTime,
+                end_time:   isAllDay ? '' : endTime
+            };
+        }
     }
 
     closeEditModal();
 
     // Re-render events
-    // Remove existing event blocks and re-render
+    document.querySelectorAll('.event-block').forEach(el => el.remove());
+    renderEvents();
+}
+
+// Delete the currently open event – sends a DELETE request to the server
+async function deleteEventFromModal() {
+    const id = document.getElementById('editEventId').value;
+
+    if (!id) return;
+
+    if (!confirm('Termin wirklich löschen?')) return;
+
+    try {
+        const response = await fetch(`event_ajax.php?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert('Fehler beim Löschen: ' + (result.error || 'Unbekannter Fehler'));
+            return;
+        }
+    } catch (error) {
+        console.error('Fehler beim Löschen des Events:', error);
+        // Continue with local removal even if the server call fails
+    }
+
+    // Remove from the local events array
+    events = events.filter(e => String(e.id) !== String(id));
+
+    closeEditModal();
+
+    // Re-render events
     document.querySelectorAll('.event-block').forEach(el => el.remove());
     renderEvents();
 }
@@ -887,6 +961,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleTimeFields(!allDayCheckbox.checked);
         });
     }
+
+    const deleteBtn = document.getElementById('editModalDelete');
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteEventFromModal);
 
     const closeBtn = document.getElementById('editModalClose');
     if (closeBtn) closeBtn.addEventListener('click', closeEditModal);

@@ -427,7 +427,9 @@ h1 {
 }
 
 .edit-modal-field input[type="text"],
-.edit-modal-field input[type="time"] {
+.edit-modal-field input[type="time"],
+.edit-modal-field input[type="date"],
+.edit-modal-field select {
     padding: 8px 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -436,7 +438,9 @@ h1 {
 }
 
 .edit-modal-field input[type="text"]:focus,
-.edit-modal-field input[type="time"]:focus {
+.edit-modal-field input[type="time"]:focus,
+.edit-modal-field input[type="date"]:focus,
+.edit-modal-field select:focus {
     outline: none;
     border-color: #4a90e2;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
@@ -507,5 +511,17 @@ h1 {
 
 .edit-modal-btn-delete:hover {
     background-color: #c0392b;
+}
+
+.new-event-btn {
+    background-color: #e67e22;
+}
+
+.new-event-btn:hover {
+    background-color: #d35400;
+}
+
+.new-event-btn:active {
+    background-color: #ba4a00;
 }
 

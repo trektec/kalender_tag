@@ -15,6 +15,19 @@ const COLUMN_GAP = 0; // Gap between columns in pixels
 const DAY_HEADER_HEIGHT = 40; // Height of day name header in pixels
 const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in pixels
 
+// Day header colors – one entry per weekday (index 0 = Monday … 6 = Sunday)
+const DAY_COLORS = [
+    '#4a90e2', // Montag
+    '#4a90e2', // Dienstag
+    '#4a90e2', // Mittwoch
+    '#4a90e2', // Donnerstag
+    '#4a90e2', // Freitag
+    '#4a90e2', // Samstag
+    '#4a90e2', // Sonntag
+];
+// Color for the header of today's column
+const TODAY_COLOR = '#2ecc71';
+
 // State
 let employers = [];
 let events = [];
@@ -303,11 +316,12 @@ function createDayColumn(date, dayIndex, isLastDay = false, allDayHeights) {
     
     // Highlight today with a different color
     if (isToday) {
-        header.style.backgroundColor = '#2ecc71';
-        header.style.color = '#ffffff';
+        header.style.backgroundColor = TODAY_COLOR;
+        header.style.color = getContrastingTextColor(TODAY_COLOR);
     } else {
-        header.style.backgroundColor = '#4a90e2';
-        header.style.color = '#ffffff';
+        const dayColor = DAY_COLORS[dayIndex] || '#4a90e2';
+        header.style.backgroundColor = dayColor;
+        header.style.color = getContrastingTextColor(dayColor);
     }
     
     column.appendChild(header);

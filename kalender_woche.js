@@ -631,8 +631,10 @@ function addTooltipToEvent(eventBlock, event) {
             ? 'Ganztägig' 
             : `${event.start_time} - ${event.end_time}`;
         
-        // Include employee name in tooltip
-        const employeeInfo = event.employer_name ? `\nMitarbeiter: ${event.employer_name}` : '';
+        // Include employee name in tooltip (look up from loaded employers list)
+        const employer = employers.find(e => String(e.id) === String(event.employer_id));
+        const employerName = employer ? employer.name : (event.employer_name || '');
+        const employeeInfo = employerName ? `\nMitarbeiter: ${employerName}` : '';
         const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}${employeeInfo}`;
         
         // Create tooltip

@@ -503,16 +503,6 @@ h1 {
     background-color: #357abd;
 }
 
-.edit-modal-btn-delete {
-    background-color: #e74c3c;
-    color: white;
-    margin-right: auto;
-}
-
-.edit-modal-btn-delete:hover {
-    background-color: #c0392b;
-}
-
 .new-event-btn {
     background-color: #e67e22;
 }

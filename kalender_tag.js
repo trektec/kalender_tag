@@ -176,7 +176,7 @@ async function loadSessions() {
 async function loadEvents() {
     try {
         const dateParam = formatDateForAPI(currentDate);
-        const response = await fetch(`event_ajax.php?date=${dateParam}`);
+        const response = await fetch(`event_iec_ajax.php?date=${dateParam}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -818,6 +818,7 @@ function openEditModal(event) {
 
     // Populate fields
     document.getElementById('editEventId').value = event.id;
+    document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
     document.getElementById('editEventCategory').value = event.category || '';
     document.getElementById('editEventColor').value = event.color || '#4a90e2';
@@ -854,7 +855,7 @@ async function deleteEventFromModal() {
         formData.append('action', 'delete');
         formData.append('event_id', id);
 
-        const response = await fetch('event_ajax.php', {
+        const response = await fetch('event_iec_ajax.php', {
             method: 'POST',
             body: formData
         });
@@ -889,8 +890,9 @@ async function deleteEventFromModal() {
 }
 
 // Save changes from the edit modal back into the events array and re-render
-function saveEventFromModal() {
+async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
+    const date = document.getElementById('editEventDate').value;
     const title = document.getElementById('editEventTitle').value.trim();
     const category = document.getElementById('editEventCategory').value.trim();
     const color = document.getElementById('editEventColor').value;
@@ -898,32 +900,198 @@ function saveEventFromModal() {
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
 
+    if (!date) {
+        alert('Bitte ein Datum angeben.');
+        return;
+    }
+
+    if (!title) {
+        alert('Bitte einen Titel eingeben.');
+        return;
+    }
+
     // Validate that timed events have both start and end times
     if (!isAllDay && (!startTime || !endTime)) {
         alert('Bitte Start- und Endzeit angeben.');
         return;
     }
 
-    // Find and update the event in the events array
+    try {
+        const formData = new FormData();
+        formData.append('action', 'edit');
+        formData.append('event_id', id);
+        formData.append('date', date);
+        formData.append('title', title);
+        formData.append('category', category);
+        formData.append('color', color);
+        formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('start_time', isAllDay ? '' : startTime);
+        formData.append('end_time', isAllDay ? '' : endTime);
+
+        const response = await fetch('event_iec_ajax.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || 'Fehler beim Speichern des Termins.');
+            return;
+        }
+    } catch (error) {
+        console.error('Fehler beim Speichern des Termins:', error);
+        alert('Fehler beim Speichern des Termins.');
+        return;
+    }
+
+    const currentDateStr = formatDateForAPI(currentDate);
+
+    // Find and update the event in the local events array
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {
-        events[eventIndex] = {
-            ...events[eventIndex],
-            title,
-            category,
-            color,
-            is_all_day: isAllDay,
-            start_time: isAllDay ? '' : startTime,
-            end_time: isAllDay ? '' : endTime
-        };
+        if (date !== currentDateStr) {
+            // Event moved to a different date – remove from current view
+            events.splice(eventIndex, 1);
+        } else {
+            events[eventIndex] = {
+                ...events[eventIndex],
+                date,
+                title,
+                category,
+                color,
+                is_all_day: isAllDay,
+                start_time: isAllDay ? '' : startTime,
+                end_time: isAllDay ? '' : endTime
+            };
+        }
     }
 
     closeEditModal();
 
     // Re-render events
-    // Remove existing event blocks and re-render
     document.querySelectorAll('.event-block').forEach(el => el.remove());
     renderEvents();
+}
+
+// Open the new event modal, pre-filling the date with the current calendar day
+function openNewEventModal() {
+    const modal = document.getElementById('newEventModal');
+    if (!modal) return;
+
+    // Populate employer dropdown from the loaded employers array
+    const employerSelect = document.getElementById('newEventEmployer');
+    employerSelect.innerHTML = '';
+    employers.forEach(emp => {
+        const option = document.createElement('option');
+        option.value = emp.id;
+        option.textContent = emp.name;
+        employerSelect.appendChild(option);
+    });
+
+    // Reset fields
+    document.getElementById('newEventDate').value = formatDateForAPI(currentDate);
+    document.getElementById('newEventTitle').value = '';
+    document.getElementById('newEventCategory').value = '';
+    document.getElementById('newEventColor').value = '#4a90e2';
+    document.getElementById('newEventIsAllDay').checked = false;
+    document.getElementById('newEventStartTime').value = '';
+    document.getElementById('newEventEndTime').value = '';
+    toggleNewEventTimeFields(true);
+
+    modal.style.display = 'flex';
+}
+
+// Close the new event modal
+function closeNewEventModal() {
+    const modal = document.getElementById('newEventModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// Toggle time input fields in the new event modal
+function toggleNewEventTimeFields(show) {
+    const timeFields = document.getElementById('newEventTimeFields');
+    if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
+}
+
+// Create a new event via event_iec_ajax.php
+async function createEventFromModal() {
+    const employerId = document.getElementById('newEventEmployer').value;
+    const date = document.getElementById('newEventDate').value;
+    const title = document.getElementById('newEventTitle').value.trim();
+    const category = document.getElementById('newEventCategory').value.trim();
+    const color = document.getElementById('newEventColor').value;
+    const isAllDay = document.getElementById('newEventIsAllDay').checked;
+    const startTime = document.getElementById('newEventStartTime').value;
+    const endTime = document.getElementById('newEventEndTime').value;
+
+    if (!date) {
+        alert('Bitte ein Datum angeben.');
+        return;
+    }
+
+    if (!title) {
+        alert('Bitte einen Titel eingeben.');
+        return;
+    }
+
+    if (!isAllDay && (!startTime || !endTime)) {
+        alert('Bitte Start- und Endzeit angeben.');
+        return;
+    }
+
+    const userId = CURRENT_USER_ID !== null && CURRENT_USER_ID !== undefined
+        ? CURRENT_USER_ID : 1;
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'create');
+        formData.append('employer_id', employerId);
+        formData.append('user_id', String(userId));
+        formData.append('date', date);
+        formData.append('title', title);
+        formData.append('category', category);
+        formData.append('color', color);
+        formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('start_time', isAllDay ? '' : startTime);
+        formData.append('end_time', isAllDay ? '' : endTime);
+
+        const response = await fetch('event_iec_ajax.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || 'Fehler beim Erstellen des Termins.');
+            return;
+        }
+
+        // Add the new event to the local array only if it belongs to the current date
+        const currentDateStr = formatDateForAPI(currentDate);
+        if (result.event && result.event.date === currentDateStr) {
+            events.push(result.event);
+            // Re-render events
+            document.querySelectorAll('.event-block').forEach(el => el.remove());
+            renderEvents();
+        }
+
+    } catch (error) {
+        console.error('Fehler beim Erstellen des Termins:', error);
+        alert('Fehler beim Erstellen des Termins.');
+        return;
+    }
+
+    closeNewEventModal();
 }
 
 // Wire up modal events after the DOM is ready
@@ -952,6 +1120,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeEditModal();
+        });
+    }
+
+    // New Event button
+    const newEventBtn = document.getElementById('newEventBtn');
+    if (newEventBtn) newEventBtn.addEventListener('click', openNewEventModal);
+
+    // New Event modal controls
+    const newEventAllDay = document.getElementById('newEventIsAllDay');
+    if (newEventAllDay) {
+        newEventAllDay.addEventListener('change', () => {
+            toggleNewEventTimeFields(!newEventAllDay.checked);
+        });
+    }
+
+    const newEventClose = document.getElementById('newEventModalClose');
+    if (newEventClose) newEventClose.addEventListener('click', closeNewEventModal);
+
+    const newEventCancel = document.getElementById('newEventModalCancel');
+    if (newEventCancel) newEventCancel.addEventListener('click', closeNewEventModal);
+
+    const newEventSave = document.getElementById('newEventModalSave');
+    if (newEventSave) newEventSave.addEventListener('click', createEventFromModal);
+
+    const newEventModal = document.getElementById('newEventModal');
+    if (newEventModal) {
+        newEventModal.addEventListener('click', (e) => {
+            if (e.target === newEventModal) closeNewEventModal();
         });
     }
 });

@@ -20,6 +20,7 @@
                 <button id="prevDayBtn" class="nav-btn" title="Vorheriger Tag">◄</button>
                 <button id="todayBtn" class="nav-btn today-btn" title="Heute">Heute</button>
                 <button id="nextDayBtn" class="nav-btn" title="Nächster Tag">►</button>
+                <button id="newEventBtn" class="nav-btn new-event-btn" title="Neuen Termin erstellen">+ Neuer Termin</button>
             </div>
         </div>
         <div id="currentDateDisplay" class="current-date"></div>
@@ -35,6 +36,10 @@
             </div>
             <div class="edit-modal-body">
                 <input type="hidden" id="editEventId">
+                <div class="edit-modal-field">
+                    <label for="editEventDate">Datum</label>
+                    <input type="date" id="editEventDate">
+                </div>
                 <div class="edit-modal-field">
                     <label for="editEventTitle">Titel</label>
                     <input type="text" id="editEventTitle" placeholder="Titel eingeben">
@@ -66,6 +71,55 @@
                 <button id="editModalDelete" class="edit-modal-btn edit-modal-btn-delete">Löschen</button>
                 <button id="editModalCancel" class="edit-modal-btn edit-modal-btn-cancel">Abbrechen</button>
                 <button id="editModalSave" class="edit-modal-btn edit-modal-btn-save">Speichern</button>
+            </div>
+        </div>
+    </div>
+    <!-- New Event Modal -->
+    <div id="newEventModal" class="edit-modal-backdrop" style="display:none;">
+        <div class="edit-modal">
+            <div class="edit-modal-header">
+                <h2>Neuer Termin</h2>
+                <button id="newEventModalClose" class="edit-modal-close" title="Schließen">✕</button>
+            </div>
+            <div class="edit-modal-body">
+                <div class="edit-modal-field">
+                    <label for="newEventEmployer">Mitarbeiter</label>
+                    <select id="newEventEmployer"></select>
+                </div>
+                <div class="edit-modal-field">
+                    <label for="newEventDate">Datum</label>
+                    <input type="date" id="newEventDate">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="newEventTitle">Titel</label>
+                    <input type="text" id="newEventTitle" placeholder="Titel eingeben">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="newEventCategory">Kategorie</label>
+                    <input type="text" id="newEventCategory" placeholder="Kategorie eingeben">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="newEventColor">Farbe</label>
+                    <input type="color" id="newEventColor" value="#4a90e2">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="newEventIsAllDay">Ganztägig</label>
+                    <input type="checkbox" id="newEventIsAllDay">
+                </div>
+                <div id="newEventTimeFields" class="edit-modal-time-fields">
+                    <div class="edit-modal-field">
+                        <label for="newEventStartTime">Startzeit</label>
+                        <input type="time" id="newEventStartTime">
+                    </div>
+                    <div class="edit-modal-field">
+                        <label for="newEventEndTime">Endzeit</label>
+                        <input type="time" id="newEventEndTime">
+                    </div>
+                </div>
+            </div>
+            <div class="edit-modal-footer">
+                <button id="newEventModalCancel" class="edit-modal-btn edit-modal-btn-cancel">Abbrechen</button>
+                <button id="newEventModalSave" class="edit-modal-btn edit-modal-btn-save">Erstellen</button>
             </div>
         </div>
     </div>

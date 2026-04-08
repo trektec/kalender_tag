@@ -77,6 +77,32 @@ h1 {
     background-color: #229954;
 }
 
+.create-event-bar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 4px 4px;
+}
+
+.create-event-btn {
+    padding: 8px 18px;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.create-event-btn:hover {
+    background-color: #219150;
+}
+
+.create-event-btn:active {
+    background-color: #1a7a43;
+}
+
 .current-date {
     text-align: center;
     font-size: 16px;
@@ -427,7 +453,9 @@ h1 {
 }
 
 .edit-modal-field input[type="text"],
-.edit-modal-field input[type="time"] {
+.edit-modal-field input[type="time"],
+.edit-modal-field input[type="date"],
+.edit-modal-field select {
     padding: 8px 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -436,7 +464,9 @@ h1 {
 }
 
 .edit-modal-field input[type="text"]:focus,
-.edit-modal-field input[type="time"]:focus {
+.edit-modal-field input[type="time"]:focus,
+.edit-modal-field input[type="date"]:focus,
+.edit-modal-field select:focus {
     outline: none;
     border-color: #4a90e2;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);

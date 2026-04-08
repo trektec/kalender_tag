@@ -27,30 +27,31 @@ if ($method === 'DELETE') {
     exit;
 }
 
-// ── POST: update (edit) an existing event ────────────────────────────────────
+// ── POST: create a new event or update an existing one ───────────────────────
 if ($method === 'POST') {
     $body = file_get_contents('php://input');
     $data = json_decode($body, true);
 
-    if (!$data || !isset($data['id'])) {
+    if (!$data) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Ungültige oder fehlende Daten.']);
         exit;
     }
 
-    $id        = (int) $data['id'];
-    $title     = isset($data['title'])      ? trim($data['title'])    : '';
-    $category  = isset($data['category'])   ? trim($data['category']) : '';
-    $color     = isset($data['color'])      ? trim($data['color'])    : '#4a90e2';
-    $isAllDay  = isset($data['is_all_day']) ? (bool) $data['is_all_day'] : false;
-    $startTime = isset($data['start_time']) ? trim($data['start_time']) : '';
-    $endTime   = isset($data['end_time'])   ? trim($data['end_time'])   : '';
+    $isCreate  = !isset($data['id']) || (int) $data['id'] <= 0;
+    $id        = $isCreate ? 0 : (int) $data['id'];
+    $date      = isset($data['date'])        ? trim($data['date'])        : date('Y-m-d');
+    $employerId = isset($data['employer_id']) ? (int) $data['employer_id'] : 0;
+    $title     = isset($data['title'])       ? trim($data['title'])       : '';
+    $category  = isset($data['category'])    ? trim($data['category'])    : '';
+    $color     = isset($data['color'])       ? trim($data['color'])       : '#4a90e2';
+    $isAllDay  = isset($data['is_all_day'])  ? (bool) $data['is_all_day'] : false;
+    $startTime = isset($data['start_time'])  ? trim($data['start_time'])  : '';
+    $endTime   = isset($data['end_time'])    ? trim($data['end_time'])    : '';
 
-    // Basic validation
-    if ($id <= 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Ungültige Event-ID.']);
-        exit;
+    // Validate date format
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        $date = date('Y-m-d');
     }
     if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
         $color = '#4a90e2';
@@ -61,20 +62,42 @@ if ($method === 'POST') {
         exit;
     }
 
-    // In a real application you would UPDATE the record in the database here.
-    // For this demo we echo back the updated event data.
-    echo json_encode([
-        'success'    => true,
-        'event'      => [
-            'id'         => $id,
-            'title'      => $title,
-            'category'   => $category,
-            'color'      => $color,
-            'is_all_day' => $isAllDay,
-            'start_time' => $isAllDay ? '' : $startTime,
-            'end_time'   => $isAllDay ? '' : $endTime,
-        ]
-    ]);
+    if ($isCreate) {
+        // In a real application you would INSERT the record into the database here.
+        // For this demo we generate a temporary ID and return the new event.
+        $newId = mt_rand(100000, 9999999);
+        echo json_encode([
+            'success' => true,
+            'event'   => [
+                'id'          => $newId,
+                'employer_id' => $employerId,
+                'user_id'     => 0,
+                'date'        => $date,
+                'title'       => $title,
+                'category'    => $category,
+                'color'       => $color,
+                'is_all_day'  => $isAllDay,
+                'start_time'  => $isAllDay ? '' : $startTime,
+                'end_time'    => $isAllDay ? '' : $endTime,
+            ]
+        ]);
+    } else {
+        // In a real application you would UPDATE the record in the database here.
+        echo json_encode([
+            'success' => true,
+            'event'   => [
+                'id'          => $id,
+                'employer_id' => $employerId,
+                'date'        => $date,
+                'title'       => $title,
+                'category'    => $category,
+                'color'       => $color,
+                'is_all_day'  => $isAllDay,
+                'start_time'  => $isAllDay ? '' : $startTime,
+                'end_time'    => $isAllDay ? '' : $endTime,
+            ]
+        ]);
+    }
     exit;
 }
 

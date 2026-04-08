@@ -811,13 +811,59 @@ function canEditEvent(event) {
     return String(event.user_id) === String(CURRENT_USER_ID);
 }
 
+// Populate the employer dropdown in the modal
+function populateEmployerDropdown(selectedId) {
+    const select = document.getElementById('editEventEmployer');
+    if (!select) return;
+    select.innerHTML = '';
+    employers.forEach(emp => {
+        const option = document.createElement('option');
+        option.value = emp.id;
+        option.textContent = emp.name;
+        if (String(emp.id) === String(selectedId)) option.selected = true;
+        select.appendChild(option);
+    });
+}
+
+// Open the modal in create mode
+function openCreateModal() {
+    const modal = document.getElementById('eventEditModal');
+    if (!modal) return;
+
+    const modalTitle = document.getElementById('editModalTitle');
+    if (modalTitle) modalTitle.textContent = 'Neuer Termin';
+
+    // Clear all fields
+    document.getElementById('editEventId').value = '';
+    document.getElementById('editEventDate').value = formatDateForAPI(currentDate);
+    document.getElementById('editEventTitle').value = '';
+    document.getElementById('editEventCategory').value = '';
+    document.getElementById('editEventColor').value = '#4a90e2';
+    document.getElementById('editEventIsAllDay').checked = false;
+    document.getElementById('editEventStartTime').value = '';
+    document.getElementById('editEventEndTime').value = '';
+    toggleTimeFields(true);
+
+    populateEmployerDropdown(employers.length > 0 ? employers[0].id : '');
+
+    // Hide delete button – nothing to delete when creating
+    const deleteBtn = document.getElementById('editModalDelete');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+
+    modal.style.display = 'flex';
+}
+
 // Open the event edit modal for a given event
 function openEditModal(event) {
     const modal = document.getElementById('eventEditModal');
     if (!modal) return;
 
+    const modalTitle = document.getElementById('editModalTitle');
+    if (modalTitle) modalTitle.textContent = 'Termin bearbeiten';
+
     // Populate fields
     document.getElementById('editEventId').value = event.id;
+    document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
     document.getElementById('editEventCategory').value = event.category || '';
     document.getElementById('editEventColor').value = event.color || '#4a90e2';
@@ -825,6 +871,12 @@ function openEditModal(event) {
     document.getElementById('editEventStartTime').value = event.start_time || '';
     document.getElementById('editEventEndTime').value = event.end_time || '';
     toggleTimeFields(!event.is_all_day);
+
+    populateEmployerDropdown(event.employer_id);
+
+    // Show delete button in edit mode
+    const deleteBtn = document.getElementById('editModalDelete');
+    if (deleteBtn) deleteBtn.style.display = '';
 
     modal.style.display = 'flex';
 }
@@ -841,9 +893,12 @@ function toggleTimeFields(show) {
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
 }
 
-// Save changes from the edit modal – sends the update to the server via POST
+// Save changes from the edit modal – creates a new event (POST without id) or
+// updates an existing one (POST with id). Sends the request to the server.
 async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
+    const date = document.getElementById('editEventDate').value;
+    const employerId = document.getElementById('editEventEmployer').value;
     const title = document.getElementById('editEventTitle').value.trim();
     const category = document.getElementById('editEventCategory').value.trim();
     const color = document.getElementById('editEventColor').value;
@@ -851,14 +906,25 @@ async function saveEventFromModal() {
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
 
-    // Validate that timed events have both start and end times
+    // Validate required fields
+    if (!date) {
+        alert('Bitte ein Datum angeben.');
+        return;
+    }
+    if (!employerId) {
+        alert('Bitte einen Mitarbeiter auswählen.');
+        return;
+    }
     if (!isAllDay && (!startTime || !endTime)) {
         alert('Bitte Start- und Endzeit angeben.');
         return;
     }
 
+    const isCreate = !id;
+
     const payload = {
-        id,
+        date,
+        employer_id: employerId,
         title,
         category,
         color,
@@ -866,6 +932,9 @@ async function saveEventFromModal() {
         start_time: isAllDay ? '' : startTime,
         end_time:   isAllDay ? '' : endTime
     };
+    if (!isCreate) {
+        payload.id = id;
+    }
 
     try {
         const response = await fetch('event_ajax.php', {
@@ -885,26 +954,63 @@ async function saveEventFromModal() {
             return;
         }
 
-        // Update the local events array with the returned data
-        const updated = result.event;
-        const eventIndex = events.findIndex(e => String(e.id) === String(updated.id));
-        if (eventIndex !== -1) {
-            events[eventIndex] = { ...events[eventIndex], ...updated };
+        const saved = result.event;
+        if (isCreate) {
+            // Add to local events array only if the date matches the current view
+            if (saved.date === formatDateForAPI(currentDate)) {
+                events.push(saved);
+            }
+        } else {
+            // Update in local events array
+            const eventIndex = events.findIndex(e => String(e.id) === String(saved.id));
+            if (eventIndex !== -1) {
+                if (saved.date === formatDateForAPI(currentDate)) {
+                    events[eventIndex] = { ...events[eventIndex], ...saved };
+                } else {
+                    // Date changed – remove from current view
+                    events.splice(eventIndex, 1);
+                }
+            }
         }
     } catch (error) {
         console.error('Fehler beim Speichern des Events:', error);
         // Fall back to local-only update so the UI still reflects the change
-        const eventIndex = events.findIndex(e => String(e.id) === String(id));
-        if (eventIndex !== -1) {
-            events[eventIndex] = {
-                ...events[eventIndex],
-                title,
-                category,
-                color,
-                is_all_day: isAllDay,
-                start_time: isAllDay ? '' : startTime,
-                end_time:   isAllDay ? '' : endTime
-            };
+        if (isCreate) {
+            // Generate a temporary local id (timestamp + random suffix to avoid collisions)
+            const tempId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+            if (date === formatDateForAPI(currentDate)) {
+                events.push({
+                    id: tempId,
+                    employer_id: parseInt(employerId, 10),
+                    user_id: CURRENT_USER_ID || 0,
+                    date,
+                    title,
+                    category,
+                    color,
+                    is_all_day: isAllDay,
+                    start_time: isAllDay ? '' : startTime,
+                    end_time:   isAllDay ? '' : endTime
+                });
+            }
+        } else {
+            const eventIndex = events.findIndex(e => String(e.id) === String(id));
+            if (eventIndex !== -1) {
+                if (date === formatDateForAPI(currentDate)) {
+                    events[eventIndex] = {
+                        ...events[eventIndex],
+                        date,
+                        employer_id: parseInt(employerId, 10),
+                        title,
+                        category,
+                        color,
+                        is_all_day: isAllDay,
+                        start_time: isAllDay ? '' : startTime,
+                        end_time:   isAllDay ? '' : endTime
+                    };
+                } else {
+                    events.splice(eventIndex, 1);
+                }
+            }
         }
     }
 
@@ -964,6 +1070,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const deleteBtn = document.getElementById('editModalDelete');
     if (deleteBtn) deleteBtn.addEventListener('click', deleteEventFromModal);
+
+    const createBtn = document.getElementById('createEventBtn');
+    if (createBtn) createBtn.addEventListener('click', openCreateModal);
 
     const closeBtn = document.getElementById('editModalClose');
     if (closeBtn) closeBtn.addEventListener('click', closeEditModal);

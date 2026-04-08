@@ -22,6 +22,9 @@
                 <button id="nextDayBtn" class="nav-btn" title="Nächster Tag">►</button>
             </div>
         </div>
+        <div class="create-event-bar">
+            <button id="createEventBtn" class="create-event-btn" title="Neuen Termin erstellen">＋ Neuer Termin</button>
+        </div>
         <div id="currentDateDisplay" class="current-date"></div>
         <div id="calendar" class="calendar-grid"></div>
     </div>
@@ -30,11 +33,19 @@
     <div id="eventEditModal" class="edit-modal-backdrop" style="display:none;">
         <div class="edit-modal">
             <div class="edit-modal-header">
-                <h2>Termin bearbeiten</h2>
+                <h2 id="editModalTitle">Termin bearbeiten</h2>
                 <button id="editModalClose" class="edit-modal-close" title="Schließen">✕</button>
             </div>
             <div class="edit-modal-body">
                 <input type="hidden" id="editEventId">
+                <div class="edit-modal-field">
+                    <label for="editEventDate">Datum</label>
+                    <input type="date" id="editEventDate">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="editEventEmployer">Mitarbeiter</label>
+                    <select id="editEventEmployer"></select>
+                </div>
                 <div class="edit-modal-field">
                     <label for="editEventTitle">Titel</label>
                     <input type="text" id="editEventTitle" placeholder="Titel eingeben">

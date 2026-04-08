@@ -70,25 +70,29 @@ if ($method === 'DELETE') {
     exit;
 }
 
-// ── POST: update (edit) an existing event ────────────────────────────────────
+// ── POST: create a new event or update an existing one ───────────────────────
 if ($method === 'POST') {
     $body = file_get_contents('php://input');
     $data = json_decode($body, true);
 
-    if (!$data || !isset($data['id'])) {
+    if (!$data) {
         jsonError(400, 'Ungültige oder fehlende Daten.');
     }
 
-    $id        = (int) $data['id'];
-    $title     = isset($data['title'])      ? trim($data['title'])    : '';
-    $category  = isset($data['category'])   ? trim($data['category']) : '';
-    $color     = isset($data['color'])      ? trim($data['color'])    : '#4a90e2';
-    $isAllDay  = isset($data['is_all_day']) ? (bool) $data['is_all_day'] : false;
-    $startTime = isset($data['start_time']) ? trim($data['start_time']) : null;
-    $endTime   = isset($data['end_time'])   ? trim($data['end_time'])   : null;
+    $isCreate   = !isset($data['id']) || (int) $data['id'] <= 0;
+    $id         = $isCreate ? 0 : (int) $data['id'];
+    $date       = isset($data['date'])        ? trim($data['date'])        : date('Y-m-d');
+    $employerId = isset($data['employer_id']) ? (int) $data['employer_id'] : 0;
+    $title      = isset($data['title'])       ? trim($data['title'])       : '';
+    $category   = isset($data['category'])    ? trim($data['category'])    : '';
+    $color      = isset($data['color'])       ? trim($data['color'])       : '#4a90e2';
+    $isAllDay   = isset($data['is_all_day'])  ? (bool) $data['is_all_day'] : false;
+    $startTime  = isset($data['start_time'])  ? trim($data['start_time'])  : null;
+    $endTime    = isset($data['end_time'])    ? trim($data['end_time'])    : null;
 
-    if ($id <= 0) {
-        jsonError(400, 'Ungültige Event-ID.');
+    // Validate date
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        $date = date('Y-m-d');
     }
     if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
         $color = '#4a90e2';
@@ -103,43 +107,91 @@ if ($method === 'POST') {
     }
 
     try {
-        $db   = getDB();
-        $stmt = $db->prepare(
-            'UPDATE events
-                SET title      = :title,
-                    category   = :category,
-                    color      = :color,
-                    is_all_day = :is_all_day,
-                    start_time = :start_time,
-                    end_time   = :end_time
-              WHERE id = :id'
-        );
-        $stmt->execute([
-            ':title'      => $title,
-            ':category'   => $category,
-            ':color'      => $color,
-            ':is_all_day' => $isAllDay ? 1 : 0,
-            ':start_time' => $startTime,
-            ':end_time'   => $endTime,
-            ':id'         => $id,
-        ]);
+        $db = getDB();
 
-        // rowCount() returns 0 both when the event does not exist and when it
-        // exists but no columns actually changed. We therefore do NOT treat
-        // 0 affected rows as "not found" – the caller's data is still valid.
+        if ($isCreate) {
+            // Require an employer for new events
+            if ($employerId <= 0) {
+                jsonError(400, 'Bitte einen Mitarbeiter auswählen.');
+            }
 
-        echo json_encode([
-            'success' => true,
-            'event'   => [
-                'id'         => $id,
-                'title'      => $title,
-                'category'   => $category,
-                'color'      => $color,
-                'is_all_day' => $isAllDay,
-                'start_time' => $isAllDay ? '' : $startTime,
-                'end_time'   => $isAllDay ? '' : $endTime,
-            ]
-        ]);
+            $stmt = $db->prepare(
+                'INSERT INTO events (employer_id, user_id, date, start_time, end_time, category, color, is_all_day, title)
+                 VALUES (:employer_id, :user_id, :date, :start_time, :end_time, :category, :color, :is_all_day, :title)'
+            );
+            $stmt->execute([
+                ':employer_id' => $employerId,
+                ':user_id'     => 0, // replace with the logged-in user's ID in a real app
+                ':date'        => $date,
+                ':start_time'  => $startTime,
+                ':end_time'    => $endTime,
+                ':category'    => $category,
+                ':color'       => $color,
+                ':is_all_day'  => $isAllDay ? 1 : 0,
+                ':title'       => $title,
+            ]);
+
+            $newId = (int) $db->lastInsertId();
+
+            echo json_encode([
+                'success' => true,
+                'event'   => [
+                    'id'          => $newId,
+                    'employer_id' => $employerId,
+                    'user_id'     => 0,
+                    'date'        => $date,
+                    'title'       => $title,
+                    'category'    => $category,
+                    'color'       => $color,
+                    'is_all_day'  => $isAllDay,
+                    'start_time'  => $isAllDay ? '' : $startTime,
+                    'end_time'    => $isAllDay ? '' : $endTime,
+                ]
+            ]);
+        } else {
+            $stmt = $db->prepare(
+                'UPDATE events
+                    SET date       = :date,
+                        employer_id = :employer_id,
+                        title      = :title,
+                        category   = :category,
+                        color      = :color,
+                        is_all_day = :is_all_day,
+                        start_time = :start_time,
+                        end_time   = :end_time
+                  WHERE id = :id'
+            );
+            $stmt->execute([
+                ':date'        => $date,
+                ':employer_id' => $employerId,
+                ':title'       => $title,
+                ':category'    => $category,
+                ':color'       => $color,
+                ':is_all_day'  => $isAllDay ? 1 : 0,
+                ':start_time'  => $startTime,
+                ':end_time'    => $endTime,
+                ':id'          => $id,
+            ]);
+
+            // rowCount() returns 0 both when the event does not exist and when it
+            // exists but no columns actually changed. We therefore do NOT treat
+            // 0 affected rows as "not found" – the caller's data is still valid.
+
+            echo json_encode([
+                'success' => true,
+                'event'   => [
+                    'id'          => $id,
+                    'employer_id' => $employerId,
+                    'date'        => $date,
+                    'title'       => $title,
+                    'category'    => $category,
+                    'color'       => $color,
+                    'is_all_day'  => $isAllDay,
+                    'start_time'  => $isAllDay ? '' : $startTime,
+                    'end_time'    => $isAllDay ? '' : $endTime,
+                ]
+            ]);
+        }
     } catch (PDOException $e) {
         jsonError(500, 'Datenbankfehler: ' . $e->getMessage());
     }

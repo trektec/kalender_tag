@@ -1,6 +1,11 @@
 // Configuration - Adjust these values to customize the calendar
 const START_HOUR = 6;
 const END_HOUR = 18;
+
+// User configuration - set CURRENT_USER_ID to the ID of the logged-in user (null = not logged in)
+// Set IS_SUPERUSER to true to allow editing all events regardless of ownership
+const CURRENT_USER_ID = null;
+const IS_SUPERUSER = false;
 const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
 const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section in pixels
 const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
@@ -447,6 +452,15 @@ function renderAllDayEvents(dayIndex, allDayEvents) {
         // Add tooltip with employee info
         addTooltipToEvent(eventBlock, event);
         
+        // Add edit click handler if user can edit this event
+        if (canEditEvent(event)) {
+            eventBlock.classList.add('editable-event');
+            eventBlock.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openEditModal(event);
+            });
+        }
+        
         allDaySection.appendChild(eventBlock);
     });
 }
@@ -576,6 +590,15 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
     // Add tooltip with employee info
     addTooltipToEvent(eventBlock, event);
     
+    // Add edit click handler if user can edit this event
+    if (canEditEvent(event)) {
+        eventBlock.classList.add('editable-event');
+        eventBlock.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(event);
+        });
+    }
+    
     dayColumn.appendChild(eventBlock);
 }
 
@@ -620,3 +643,104 @@ function addTooltipToEvent(eventBlock, event) {
         }
     });
 }
+
+// Check if the current user can edit a given event
+function canEditEvent(event) {
+    if (IS_SUPERUSER) return true;
+    if (CURRENT_USER_ID === null || CURRENT_USER_ID === undefined) return false;
+    return String(event.user_id) === String(CURRENT_USER_ID);
+}
+
+// Open the event edit modal for a given event
+function openEditModal(event) {
+    const modal = document.getElementById('eventEditModal');
+    if (!modal) return;
+
+    // Populate fields
+    document.getElementById('editEventId').value = event.id;
+    document.getElementById('editEventTitle').value = event.title || '';
+    document.getElementById('editEventCategory').value = event.category || '';
+    document.getElementById('editEventColor').value = event.color || '#4a90e2';
+    document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
+    document.getElementById('editEventStartTime').value = event.start_time || '';
+    document.getElementById('editEventEndTime').value = event.end_time || '';
+    toggleTimeFields(!event.is_all_day);
+
+    modal.style.display = 'flex';
+}
+
+// Close the event edit modal
+function closeEditModal() {
+    const modal = document.getElementById('eventEditModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// Toggle time input fields based on all-day checkbox
+function toggleTimeFields(show) {
+    const timeFields = document.getElementById('editEventTimeFields');
+    if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
+}
+
+// Save changes from the edit modal back into the events array and re-render
+function saveEventFromModal() {
+    const id = document.getElementById('editEventId').value;
+    const title = document.getElementById('editEventTitle').value.trim();
+    const category = document.getElementById('editEventCategory').value.trim();
+    const color = document.getElementById('editEventColor').value;
+    const isAllDay = document.getElementById('editEventIsAllDay').checked;
+    const startTime = document.getElementById('editEventStartTime').value;
+    const endTime = document.getElementById('editEventEndTime').value;
+
+    // Validate that timed events have both start and end times
+    if (!isAllDay && (!startTime || !endTime)) {
+        alert('Bitte Start- und Endzeit angeben.');
+        return;
+    }
+
+    // Find and update the event in the events array
+    const eventIndex = events.findIndex(e => String(e.id) === String(id));
+    if (eventIndex !== -1) {
+        events[eventIndex] = {
+            ...events[eventIndex],
+            title,
+            category,
+            color,
+            is_all_day: isAllDay,
+            start_time: isAllDay ? '' : startTime,
+            end_time: isAllDay ? '' : endTime
+        };
+    }
+
+    closeEditModal();
+
+    // Re-render events
+    document.querySelectorAll('.event-block').forEach(el => el.remove());
+    renderEvents();
+}
+
+// Wire up modal events after the DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const allDayCheckbox = document.getElementById('editEventIsAllDay');
+    if (allDayCheckbox) {
+        allDayCheckbox.addEventListener('change', () => {
+            toggleTimeFields(!allDayCheckbox.checked);
+        });
+    }
+
+    const closeBtn = document.getElementById('editModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeEditModal);
+
+    const cancelBtn = document.getElementById('editModalCancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeEditModal);
+
+    const saveBtn = document.getElementById('editModalSave');
+    if (saveBtn) saveBtn.addEventListener('click', saveEventFromModal);
+
+    // Close modal when clicking the backdrop
+    const modal = document.getElementById('eventEditModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeEditModal();
+        });
+    }
+});

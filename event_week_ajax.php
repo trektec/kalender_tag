@@ -30,13 +30,15 @@ for ($i = 0; $i < 7; $i++) {
 
 // Sample event data for employees
 // In a real application, this would come from a database
-// Structure: id, employer_id, date, start_time, end_time, category, color, is_all_day, title, employer_name
+// Structure: id, employer_id, user_id, date, start_time, end_time, category, color, is_all_day, title, employer_name
+// user_id identifies the user who created the event
 
 $baseEvents = [
     // Max Mustermann (employer_id: 1)
     [
         'id' => 1,
         'employer_id' => 1,
+        'user_id' => 1,
         'employer_name' => 'Max Mustermann',
         'date' => date('Y-m-d'),
         'start_time' => '08:00',
@@ -49,6 +51,7 @@ $baseEvents = [
     [
         'id' => 2,
         'employer_id' => 1,
+        'user_id' => 1,
         'employer_name' => 'Max Mustermann',
         'date' => date('Y-m-d'),
         'start_time' => '10:00',
@@ -61,6 +64,7 @@ $baseEvents = [
     [
         'id' => 3,
         'employer_id' => 1,
+        'user_id' => 1,
         'employer_name' => 'Max Mustermann',
         'date' => date('Y-m-d'),
         'start_time' => '14:00',
@@ -73,6 +77,7 @@ $baseEvents = [
     [
         'id' => 4,
         'employer_id' => 1,
+        'user_id' => 1,
         'employer_name' => 'Max Mustermann',
         'date' => date('Y-m-d'),
         'start_time' => '',
@@ -87,6 +92,7 @@ $baseEvents = [
     [
         'id' => 5,
         'employer_id' => 2,
+        'user_id' => 2,
         'employer_name' => 'Anna Schmidt',
         'date' => date('Y-m-d', strtotime('+1 day')),
         'start_time' => '09:00',
@@ -99,6 +105,7 @@ $baseEvents = [
     [
         'id' => 6,
         'employer_id' => 2,
+        'user_id' => 2,
         'employer_name' => 'Anna Schmidt',
         'date' => date('Y-m-d', strtotime('+1 day')),
         'start_time' => '11:00',
@@ -113,6 +120,7 @@ $baseEvents = [
     [
         'id' => 8,
         'employer_id' => 3,
+        'user_id' => 3,
         'employer_name' => 'Peter Weber',
         'date' => date('Y-m-d', strtotime('+2 days')),
         'start_time' => '08:30',
@@ -125,6 +133,7 @@ $baseEvents = [
     [
         'id' => 9,
         'employer_id' => 3,
+        'user_id' => 3,
         'employer_name' => 'Peter Weber',
         'date' => date('Y-m-d', strtotime('+2 days')),
         'start_time' => '13:00',
@@ -137,6 +146,7 @@ $baseEvents = [
     [
         'id' => 14,
         'employer_id' => 3,
+        'user_id' => 3,
         'employer_name' => 'Peter Weber',
         'date' => date('Y-m-d', strtotime('+3 days')),
         'start_time' => '',
@@ -149,6 +159,7 @@ $baseEvents = [
     [
         'id' => 15,
         'employer_id' => 3,
+        'user_id' => 3,
         'employer_name' => 'Peter Weber',
         'date' => date('Y-m-d', strtotime('+3 days')),
         'start_time' => '',
@@ -161,6 +172,7 @@ $baseEvents = [
     [
         'id' => 16,
         'employer_id' => 3,
+        'user_id' => 3,
         'employer_name' => 'Peter Weber',
         'date' => date('Y-m-d', strtotime('+3 days')),
         'start_time' => '',
@@ -175,6 +187,7 @@ $baseEvents = [
     [
         'id' => 11,
         'employer_id' => 4,
+        'user_id' => 4,
         'employer_name' => 'Julia Müller',
         'date' => date('Y-m-d', strtotime('+4 days')),
         'start_time' => '',
@@ -187,6 +200,7 @@ $baseEvents = [
     [
         'id' => 12,
         'employer_id' => 4,
+        'user_id' => 4,
         'employer_name' => 'Julia Müller',
         'date' => date('Y-m-d'),
         'start_time' => '10:00',

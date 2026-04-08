@@ -841,6 +841,53 @@ function toggleTimeFields(show) {
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
 }
 
+// Delete the event currently shown in the modal
+async function deleteEventFromModal() {
+    const id = document.getElementById('editEventId').value;
+
+    if (!confirm('Termin wirklich löschen?')) {
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('event_id', id);
+
+        const response = await fetch('event_ajax.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message || 'Fehler beim Löschen des Termins.');
+            return;
+        }
+    } catch (error) {
+        console.error('Fehler beim Löschen des Termins:', error);
+        alert('Fehler beim Löschen des Termins.');
+        return;
+    }
+
+    // Remove the event from the local events array
+    const eventIndex = events.findIndex(e => String(e.id) === String(id));
+    if (eventIndex !== -1) {
+        events.splice(eventIndex, 1);
+    }
+
+    closeEditModal();
+
+    // Re-render events
+    document.querySelectorAll('.event-block').forEach(el => el.remove());
+    renderEvents();
+}
+
 // Save changes from the edit modal back into the events array and re-render
 function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
@@ -887,6 +934,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleTimeFields(!allDayCheckbox.checked);
         });
     }
+
+    const deleteBtn = document.getElementById('editModalDelete');
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteEventFromModal);
 
     const closeBtn = document.getElementById('editModalClose');
     if (closeBtn) closeBtn.addEventListener('click', closeEditModal);

@@ -691,6 +691,12 @@ function saveEventFromModal() {
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
 
+    // Validate that timed events have both start and end times
+    if (!isAllDay && (!startTime || !endTime)) {
+        alert('Bitte Start- und Endzeit angeben.');
+        return;
+    }
+
     // Find and update the event in the events array
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {

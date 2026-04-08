@@ -1,0 +1,527 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.calendar-container {
+    width: var(--calendar-width, 100%);
+    max-width: 100%;
+    margin: 0;
+    background-color: white;
+    padding: 20px;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+.header-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.date-navigation {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-btn {
+    padding: 10px 20px;
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    min-width: 50px;
+}
+
+.nav-btn:hover {
+    background-color: #357abd;
+}
+
+.nav-btn:active {
+    background-color: #2a5fa0;
+}
+
+.today-btn {
+    background-color: #2ecc71;
+}
+
+.today-btn:hover {
+    background-color: #27ae60;
+}
+
+.today-btn:active {
+    background-color: #229954;
+}
+
+.current-date {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+    padding: 8px;
+    background-color: #f0f8ff;
+    border-radius: 4px;
+}
+
+.calendar-grid {
+    display: flex;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.time-column {
+    flex-shrink: 0;
+    width: 80px;
+    background-color: #f9f9f9;
+    border-right: 2px solid #ddd;
+}
+
+.time-column:last-child {
+    border-right: none;
+    border-left: 2px solid #ddd;
+}
+
+.time-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border-bottom: 2px solid #ddd;
+    background-color: #e9e9e9;
+}
+
+.time-slot {
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #666;
+}
+
+.employer-column {
+    flex: 1;
+    min-width: 200px;
+    border-left: 2px solid #999;
+    border-right: 2px solid #999;
+    position: relative;
+}
+
+.employer-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    background-color: #4a90e2;
+    color: white;
+    border-bottom: 1px solid #ddd;
+}
+
+.all-day-section {
+    background-color: #f0f8ff;
+    border-bottom: 2px solid #ddd;
+    padding: 0;
+    font-size: 12px;
+    color: #666;
+    display: block;
+    position: relative;
+    overflow: hidden;
+}
+
+.hour-slot {
+    border-bottom: 1px solid #e0e0e0;
+    position: relative;
+    background-color: white;
+    transition: background-color 0.2s;
+}
+
+/* Hover effects removed per requirement */
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #666;
+}
+
+.error {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #d9534f;
+}
+
+/* Timeline styles */
+.timeline-container {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.timeline-indicator {
+    position: absolute;
+    left: 0;
+    width: 80px;
+    height: 24px;
+    background-color: red;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 3px;
+    margin-top: -11px;
+}
+
+.timeline-line {
+    position: absolute;
+    left: 80px;
+    right: 0;
+    height: 2px;
+    background-color: red;
+    box-shadow: 0 0 3px rgba(255, 0, 0, 0.5);
+}
+
+.calendar-grid {
+    display: flex;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    position: relative;
+}
+
+/* Session block styles */
+.session-block {
+    position: absolute;
+    background-color: #d3d3d3;
+    border: 2px solid #c0c0c0;
+    border-radius: 5px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 50;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.session-block.active-session {
+    /* Active sessions use the same styling as regular sessions */
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.session-time {
+    display: none;
+}
+
+/* Tooltip styles */
+.session-tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.session-tooltip.show {
+    opacity: 1;
+}
+
+/* Event block styles */
+.event-block {
+    position: absolute;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 11px;
+    color: white;
+    overflow: hidden;
+    z-index: 60;
+    pointer-events: auto;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+/* Hover effects removed per requirement */
+
+.event-block.all-day-event {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 12px;
+    text-align: center;
+    margin: 2px 0;
+}
+
+.event-block.timed-event {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.event-title {
+    font-weight: bold;
+    margin-bottom: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.event-time {
+    font-size: 10px;
+    opacity: 0.9;
+}
+
+.event-tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 1001;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    max-width: 250px;
+}
+
+.event-tooltip.show {
+    opacity: 1;
+}
+
+/* Make all-day section relative for absolute positioning of events - see .all-day-section rule above */
+
+/* Editable event indicator */
+.event-block.editable-event {
+    cursor: pointer;
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: -2px;
+}
+
+.event-block.editable-event:hover {
+    outline-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Event Edit Modal */
+.edit-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-modal {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.edit-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background-color: #4a90e2;
+    color: white;
+}
+
+.edit-modal-header h2 {
+    font-size: 18px;
+    margin: 0;
+    color: white;
+    text-align: left;
+}
+
+.edit-modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.edit-modal-close:hover {
+    opacity: 0.8;
+}
+
+.edit-modal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.edit-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-modal-field label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #555;
+}
+
+.edit-modal-field input[type="text"],
+.edit-modal-field input[type="time"],
+.edit-modal-field input[type="date"],
+.edit-modal-field select {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+}
+
+.edit-modal-field input[type="text"]:focus,
+.edit-modal-field input[type="time"]:focus,
+.edit-modal-field input[type="date"]:focus,
+.edit-modal-field select:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.edit-modal-field input[type="color"] {
+    width: 48px;
+    height: 36px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.edit-modal-field input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.edit-modal-time-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.edit-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid #eee;
+}
+
+.edit-modal-btn {
+    padding: 9px 22px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.edit-modal-btn-cancel {
+    background-color: #e0e0e0;
+    color: #333;
+}
+
+.edit-modal-btn-cancel:hover {
+    background-color: #c8c8c8;
+}
+
+.edit-modal-btn-save {
+    background-color: #4a90e2;
+    color: white;
+}
+
+.edit-modal-btn-save:hover {
+    background-color: #357abd;
+}
+
+.edit-modal-btn-delete {
+    background-color: #e74c3c;
+    color: white;
+    margin-right: auto;
+}
+
+.edit-modal-btn-delete:hover {
+    background-color: #c0392b;
+}
+
+.new-event-btn {
+    background-color: #e67e22;
+}
+
+.new-event-btn:hover {
+    background-color: #d35400;
+}
+
+.new-event-btn:active {
+    background-color: #ba4a00;
+}
+

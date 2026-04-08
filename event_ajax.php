@@ -8,7 +8,36 @@ header('Content-Type: application/json');
 // 3. Retrieve data from a secure database instead of hardcoded arrays
 // 4. Validate and sanitize any input parameters (e.g., date filters)
 
-// Get date parameter from query string, default to today
+// Handle DELETE action via POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = isset($_POST['action']) ? $_POST['action'] : '';
+
+    if ($action === 'delete') {
+        $eventId = isset($_POST['event_id']) ? $_POST['event_id'] : '';
+
+        // Validate that event_id is a positive integer
+        if (filter_var($eventId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Ungültige Termin-ID.']);
+            exit;
+        }
+
+        $eventId = (int)$eventId;
+
+        // NOTE: In production, verify that the current session user is either the creator
+        // of the event (event.user_id == session user id) or a superuser before proceeding.
+        // Then mark the record as deleted in the database (e.g. SET deleted = 1 WHERE id = $eventId).
+        // For now, we simply return success since the events are a hardcoded in-memory array.
+
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Unbekannte Aktion.']);
+    exit;
+}
+
 $requestedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
 // Validate date format (YYYY-MM-DD)

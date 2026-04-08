@@ -25,6 +25,49 @@
         <div id="currentWeekDisplay" class="current-date"></div>
         <div id="calendar" class="calendar-grid"></div>
     </div>
+
+    <!-- Event Edit Modal -->
+    <div id="eventEditModal" class="edit-modal-backdrop" style="display:none;">
+        <div class="edit-modal">
+            <div class="edit-modal-header">
+                <h2>Termin bearbeiten</h2>
+                <button id="editModalClose" class="edit-modal-close" title="Schließen">✕</button>
+            </div>
+            <div class="edit-modal-body">
+                <input type="hidden" id="editEventId">
+                <div class="edit-modal-field">
+                    <label for="editEventTitle">Titel</label>
+                    <input type="text" id="editEventTitle" placeholder="Titel eingeben">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="editEventCategory">Kategorie</label>
+                    <input type="text" id="editEventCategory" placeholder="Kategorie eingeben">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="editEventColor">Farbe</label>
+                    <input type="color" id="editEventColor">
+                </div>
+                <div class="edit-modal-field">
+                    <label for="editEventIsAllDay">Ganztägig</label>
+                    <input type="checkbox" id="editEventIsAllDay">
+                </div>
+                <div id="editEventTimeFields" class="edit-modal-time-fields">
+                    <div class="edit-modal-field">
+                        <label for="editEventStartTime">Startzeit</label>
+                        <input type="time" id="editEventStartTime">
+                    </div>
+                    <div class="edit-modal-field">
+                        <label for="editEventEndTime">Endzeit</label>
+                        <input type="time" id="editEventEndTime">
+                    </div>
+                </div>
+            </div>
+            <div class="edit-modal-footer">
+                <button id="editModalCancel" class="edit-modal-btn edit-modal-btn-cancel">Abbrechen</button>
+                <button id="editModalSave" class="edit-modal-btn edit-modal-btn-save">Speichern</button>
+            </div>
+        </div>
+    </div>
     <script src="kalender_woche.js"></script>
 </body>
 </html>

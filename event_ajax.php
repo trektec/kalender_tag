@@ -24,13 +24,15 @@ if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
 
 // Sample event data for employees
 // In a real application, this would come from a database
-// Structure: id, employer_id, date, start_time, end_time, category, color, is_all_day, title
+// Structure: id, employer_id, user_id, date, start_time, end_time, category, color, is_all_day, title
+// user_id identifies the user who created the event
 
 $events = [
     // Max Mustermann (employer_id: 1)
     [
         'id' => 1,
         'employer_id' => 1,
+        'user_id' => 1,
         'date' => date('Y-m-d'),
         'start_time' => '08:00',
         'end_time' => '09:30',
@@ -42,6 +44,7 @@ $events = [
     [
         'id' => 2,
         'employer_id' => 1,
+        'user_id' => 1,
         'date' => date('Y-m-d'),
         'start_time' => '10:00',
         'end_time' => '11:00',
@@ -53,6 +56,7 @@ $events = [
     [
         'id' => 3,
         'employer_id' => 1,
+        'user_id' => 1,
         'date' => date('Y-m-d'),
         'start_time' => '14:00',
         'end_time' => '15:30',
@@ -64,6 +68,7 @@ $events = [
     [
         'id' => 4,
         'employer_id' => 1,
+        'user_id' => 1,
         'date' => date('Y-m-d'),
         'start_time' => '',
         'end_time' => '',
@@ -75,6 +80,7 @@ $events = [
     [
         'id' => 13,
         'employer_id' => 1,
+        'user_id' => 1,
         'date' => date('Y-m-d'),
         'start_time' => '',
         'end_time' => '',
@@ -88,6 +94,7 @@ $events = [
     [
         'id' => 5,
         'employer_id' => 2,
+        'user_id' => 2,
         'date' => date('Y-m-d'),
         'start_time' => '09:00',
         'end_time' => '10:30',
@@ -99,6 +106,7 @@ $events = [
     [
         'id' => 6,
         'employer_id' => 2,
+        'user_id' => 2,
         'date' => date('Y-m-d'),
         'start_time' => '11:00',
         'end_time' => '12:00',
@@ -110,6 +118,7 @@ $events = [
     [
         'id' => 7,
         'employer_id' => 2,
+        'user_id' => 2,
         'date' => date('Y-m-d'),
         'start_time' => '11:30',
         'end_time' => '12:30',
@@ -123,6 +132,7 @@ $events = [
     [
         'id' => 14,
         'employer_id' => 3,
+        'user_id' => 3,
         'date' => date('Y-m-d'),
         'start_time' => '',
         'end_time' => '',
@@ -134,6 +144,7 @@ $events = [
     [
         'id' => 15,
         'employer_id' => 3,
+        'user_id' => 3,
         'date' => date('Y-m-d'),
         'start_time' => '',
         'end_time' => '',
@@ -145,6 +156,7 @@ $events = [
     [
         'id' => 16,
         'employer_id' => 3,
+        'user_id' => 3,
         'date' => date('Y-m-d'),
         'start_time' => '',
         'end_time' => '',
@@ -156,6 +168,7 @@ $events = [
     [
         'id' => 8,
         'employer_id' => 3,
+        'user_id' => 3,
         'date' => date('Y-m-d'),
         'start_time' => '08:30',
         'end_time' => '10:00',
@@ -167,6 +180,7 @@ $events = [
     [
         'id' => 9,
         'employer_id' => 3,
+        'user_id' => 3,
         'date' => date('Y-m-d'),
         'start_time' => '13:00',
         'end_time' => '14:00',
@@ -178,6 +192,7 @@ $events = [
     [
         'id' => 10,
         'employer_id' => 3,
+        'user_id' => 3,
         'date' => date('Y-m-d'),
         'start_time' => '13:15',
         'end_time' => '14:15',
@@ -191,6 +206,7 @@ $events = [
     [
         'id' => 11,
         'employer_id' => 4,
+        'user_id' => 4,
         'date' => date('Y-m-d'),
         'start_time' => '',
         'end_time' => '',
@@ -202,6 +218,7 @@ $events = [
     [
         'id' => 12,
         'employer_id' => 4,
+        'user_id' => 4,
         'date' => date('Y-m-d'),
         'start_time' => '10:00',
         'end_time' => '11:30',

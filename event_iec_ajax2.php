@@ -278,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              WHERE  id = ? AND deleted = 0'
         );
         $stmt->bind_param(
-            'sssssisis',
+            'ssssssisi',
             $date,
             $dateTo,
             $startTime,

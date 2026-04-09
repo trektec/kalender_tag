@@ -41,7 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ----------------------------------------------------------
     if ($action === 'create') {
         // --- Pflichtfelder validieren ---
-        $employerId = isset($_POST['employer_id']) ? $_POST['employer_id'] : '';
+        // Accept employer_ids[] array (multi-employer) or fall back to single employer_id
+        $employerIdsRaw = isset($_POST['employer_ids']) && is_array($_POST['employer_ids'])
+            ? $_POST['employer_ids']
+            : (isset($_POST['employer_id']) ? [$_POST['employer_id']] : []);
+        $employerIds = [];
+        foreach ($employerIdsRaw as $eid) {
+            if (filter_var($eid, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false) {
+                $employerIds[] = (int)$eid;
+            }
+        }
+        if (empty($employerIds)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Ungültige oder fehlende Mitarbeiter-ID(s).']);
+            exit;
+        }
+        $employerId = $employerIds[0]; // primary employer for backward compatibility
+
         $userId     = isset($_POST['user_id'])     ? $_POST['user_id']     : '1';
         $date       = isset($_POST['date'])        ? trim($_POST['date'])  : '';
         $title      = isset($_POST['title'])       ? trim($_POST['title']) : '';
@@ -51,12 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $startTime  = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
         $endTime    = isset($_POST['end_time'])    ? trim($_POST['end_time'])   : '';
         $dateTo     = isset($_POST['date_to'])     ? trim($_POST['date_to'])    : '';
-
-        if (filter_var($employerId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Ungültige Mitarbeiter-ID.']);
-            exit;
-        }
 
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             http_response_code(400);
@@ -101,21 +111,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $employerId = (int)$employerId;
-        $userId     = filter_var($userId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
-                      ? (int)$userId : 1;
+        $userId = filter_var($userId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
+                  ? (int)$userId : 1;
 
         $eventData = [
-            'employer_id' => $employerId,
-            'user_id'     => $userId,
-            'date'        => $date,
-            'date_to'     => $dateTo,
-            'start_time'  => $startTime,
-            'end_time'    => $endTime,
-            'category'    => $category,
-            'color'       => $color,
-            'is_all_day'  => $isAllDay,
-            'title'       => $title,
+            'employer_id'  => $employerId,
+            'employer_ids' => $employerIds,
+            'user_id'      => $userId,
+            'date'         => $date,
+            'date_to'      => $dateTo,
+            'start_time'   => $startTime,
+            'end_time'     => $endTime,
+            'category'     => $category,
+            'color'        => $color,
+            'is_all_day'   => $isAllDay,
+            'title'        => $title,
         ];
 
         // Demo-Modus: Temporäre ID generieren und neues Termin-Objekt zurückgeben.
@@ -196,10 +206,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Demo-Modus: Kein Datenbankaufruf; der Termin wird nur im Arbeitsspeicher simuliert.
         // Produktionsmodus – folgende Zeilen einkommentieren:
         // dbUpdateEvent($eventId, [
-        //     'date'       => $date,       'date_to'    => $dateTo,
-        //     'start_time' => $startTime,  'end_time'   => $endTime,
-        //     'category'   => $category,   'color'      => $color,
-        //     'is_all_day' => $isAllDay,   'title'      => $title,
+        //     'date'         => $date,       'date_to'    => $dateTo,
+        //     'start_time'   => $startTime,  'end_time'   => $endTime,
+        //     'category'     => $category,   'color'      => $color,
+        //     'is_all_day'   => $isAllDay,   'title'      => $title,
+        //     'employer_ids' => $employerIds,
         // ]);
 
         echo json_encode(['success' => true]);
@@ -259,31 +270,31 @@ if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
 $events = [
     // Max Mustermann (employer_id: 1)
     [
-        'id' => 1, 'employer_id' => 1, 'user_id' => 1,
+        'id' => 1, 'employer_id' => 1, 'employer_ids' => [1], 'user_id' => 1,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '08:00', 'end_time' => '09:30',
         'category' => 'meeting', 'color' => '#4a90e2', 'is_all_day' => false,
         'title' => 'Team Meeting'
     ],
     [
-        'id' => 2, 'employer_id' => 1, 'user_id' => 1,
+        'id' => 2, 'employer_id' => 1, 'employer_ids' => [1], 'user_id' => 1,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '10:00', 'end_time' => '11:00',
         'category' => 'appointment', 'color' => '#e74c3c', 'is_all_day' => false,
         'title' => 'Client Call'
     ],
     [
-        'id' => 3, 'employer_id' => 1, 'user_id' => 1,
+        'id' => 3, 'employer_id' => 1, 'employer_ids' => [1], 'user_id' => 1,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '14:00', 'end_time' => '15:30',
         'category' => 'training', 'color' => '#f39c12', 'is_all_day' => false,
         'title' => 'Training Session'
     ],
     [
-        'id' => 4, 'employer_id' => 1, 'user_id' => 1,
+        'id' => 4, 'employer_id' => 1, 'employer_ids' => [1], 'user_id' => 1,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d', strtotime('+2 days')), 'start_time' => '', 'end_time' => '',
         'category' => 'holiday', 'color' => '#2ecc71', 'is_all_day' => true,
         'title' => 'Conference'
     ],
     [
-        'id' => 13, 'employer_id' => 1, 'user_id' => 1,
+        'id' => 13, 'employer_id' => 1, 'employer_ids' => [1], 'user_id' => 1,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '', 'end_time' => '',
         'category' => 'training', 'color' => '#e67e22', 'is_all_day' => true,
         'title' => 'Workshop Day'
@@ -291,19 +302,19 @@ $events = [
 
     // Anna Schmidt (employer_id: 2)
     [
-        'id' => 5, 'employer_id' => 2, 'user_id' => 2,
+        'id' => 5, 'employer_id' => 2, 'employer_ids' => [2], 'user_id' => 2,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '09:00', 'end_time' => '10:30',
         'category' => 'meeting', 'color' => '#4a90e2', 'is_all_day' => false,
         'title' => 'Project Review'
     ],
     [
-        'id' => 6, 'employer_id' => 2, 'user_id' => 2,
+        'id' => 6, 'employer_id' => 2, 'employer_ids' => [2], 'user_id' => 2,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '11:00', 'end_time' => '12:00',
         'category' => 'appointment', 'color' => '#e74c3c', 'is_all_day' => false,
         'title' => 'Customer Meeting'
     ],
     [
-        'id' => 7, 'employer_id' => 2, 'user_id' => 2,
+        'id' => 7, 'employer_id' => 2, 'employer_ids' => [2], 'user_id' => 2,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '11:30', 'end_time' => '12:30',
         'category' => 'planning', 'color' => '#9b59b6', 'is_all_day' => false,
         'title' => 'Planning Session'
@@ -311,37 +322,37 @@ $events = [
 
     // Peter Weber (employer_id: 3)
     [
-        'id' => 14, 'employer_id' => 3, 'user_id' => 3,
+        'id' => 14, 'employer_id' => 3, 'employer_ids' => [3], 'user_id' => 3,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '', 'end_time' => '',
         'category' => 'meeting', 'color' => '#3498db', 'is_all_day' => true,
         'title' => 'All-Day Meeting'
     ],
     [
-        'id' => 15, 'employer_id' => 3, 'user_id' => 3,
+        'id' => 15, 'employer_id' => 3, 'employer_ids' => [3], 'user_id' => 3,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '', 'end_time' => '',
         'category' => 'training', 'color' => '#9b59b6', 'is_all_day' => true,
         'title' => 'Training'
     ],
     [
-        'id' => 16, 'employer_id' => 3, 'user_id' => 3,
+        'id' => 16, 'employer_id' => 3, 'employer_ids' => [3], 'user_id' => 3,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '', 'end_time' => '',
         'category' => 'workshop', 'color' => '#e74c3c', 'is_all_day' => true,
         'title' => 'Team Building'
     ],
     [
-        'id' => 8, 'employer_id' => 3, 'user_id' => 3,
+        'id' => 8, 'employer_id' => 3, 'employer_ids' => [3], 'user_id' => 3,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '10:00',
         'category' => 'workshop', 'color' => '#1abc9c', 'is_all_day' => false,
         'title' => 'Workshop'
     ],
     [
-        'id' => 9, 'employer_id' => 3, 'user_id' => 3,
+        'id' => 9, 'employer_id' => 3, 'employer_ids' => [3], 'user_id' => 3,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '13:00', 'end_time' => '14:00',
         'category' => 'meeting', 'color' => '#4a90e2', 'is_all_day' => false,
         'title' => 'Status Update'
     ],
     [
-        'id' => 10, 'employer_id' => 3, 'user_id' => 3,
+        'id' => 10, 'employer_id' => 3, 'employer_ids' => [3], 'user_id' => 3,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '13:15', 'end_time' => '14:15',
         'category' => 'appointment', 'color' => '#e74c3c', 'is_all_day' => false,
         'title' => 'One-on-One'
@@ -349,13 +360,13 @@ $events = [
 
     // Julia Müller (employer_id: 4)
     [
-        'id' => 11, 'employer_id' => 4, 'user_id' => 4,
+        'id' => 11, 'employer_id' => 4, 'employer_ids' => [4], 'user_id' => 4,
         'date' => date('Y-m-d', strtotime('-1 day')), 'date_to' => date('Y-m-d', strtotime('+1 day')), 'start_time' => '', 'end_time' => '',
         'category' => 'vacation', 'color' => '#27ae60', 'is_all_day' => true,
         'title' => 'Urlaub'
     ],
     [
-        'id' => 12, 'employer_id' => 4, 'user_id' => 4,
+        'id' => 12, 'employer_id' => 4, 'employer_ids' => [4], 'user_id' => 4,
         'date' => date('Y-m-d'), 'date_to' => date('Y-m-d'), 'start_time' => '10:00', 'end_time' => '11:30',
         'category' => 'meeting', 'color' => '#4a90e2', 'is_all_day' => false,
         'title' => 'Team Sync'

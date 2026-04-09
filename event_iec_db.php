@@ -37,6 +37,14 @@
 //        INDEX idx_employer (employer_id)
 //    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 //
+//    -- Junction table for many-to-many event-employer assignments:
+//    CREATE TABLE IF NOT EXISTS event_employers (
+//        event_id     INT UNSIGNED NOT NULL,
+//        employer_id  INT UNSIGNED NOT NULL,
+//        PRIMARY KEY (event_id, employer_id),
+//        INDEX idx_ee_employer (employer_id)
+//    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+//
 //    To add date_to to an existing table:
 //      ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
 //
@@ -123,15 +131,18 @@ function dbGetEvents(string $date): array
     // Alle aktiven Termine laden, die das gewünschte Datum abdecken
     // (date <= $date AND date_to >= $date); Ganztags-Termine werden zuerst angezeigt
     $stmt = $conn->prepare(
-        'SELECT id, employer_id, user_id,
-                DATE_FORMAT(date,    \'%Y-%m-%d\') AS date,
-                DATE_FORMAT(date_to, \'%Y-%m-%d\') AS date_to,
-                IFNULL(TIME_FORMAT(start_time, \'%H:%i\'), \'\') AS start_time,
-                IFNULL(TIME_FORMAT(end_time,   \'%H:%i\'), \'\') AS end_time,
-                category, color, is_all_day, title
-         FROM   events
-         WHERE  date <= ? AND COALESCE(date_to, date) >= ? AND deleted = 0
-         ORDER  BY is_all_day DESC, start_time ASC'
+        'SELECT e.id, e.employer_id, e.user_id,
+                DATE_FORMAT(e.date,    \'%Y-%m-%d\') AS date,
+                DATE_FORMAT(e.date_to, \'%Y-%m-%d\') AS date_to,
+                IFNULL(TIME_FORMAT(e.start_time, \'%H:%i\'), \'\') AS start_time,
+                IFNULL(TIME_FORMAT(e.end_time,   \'%H:%i\'), \'\') AS end_time,
+                e.category, e.color, e.is_all_day, e.title,
+                GROUP_CONCAT(DISTINCT ee.employer_id ORDER BY ee.employer_id) AS employer_ids_str
+         FROM   events e
+         LEFT JOIN event_employers ee ON ee.event_id = e.id
+         WHERE  e.date <= ? AND COALESCE(e.date_to, e.date) >= ? AND e.deleted = 0
+         GROUP  BY e.id
+         ORDER  BY e.is_all_day DESC, e.start_time ASC'
     );
 
     $stmt->bind_param('ss', $date, $date);
@@ -148,6 +159,11 @@ function dbGetEvents(string $date): array
         $row['is_all_day']  = (bool)$row['is_all_day'];
         // Normalize date_to: fall back to date if not set
         $row['date_to']     = $row['date_to'] ?? $row['date'];
+        // Parse employer_ids from GROUP_CONCAT result; fall back to primary employer_id
+        $row['employer_ids'] = $row['employer_ids_str'] !== null
+            ? array_map('intval', explode(',', $row['employer_ids_str']))
+            : [$row['employer_id']];
+        unset($row['employer_ids_str']);
         $events[]           = $row;
     }
 
@@ -161,7 +177,8 @@ function dbGetEvents(string $date): array
 // Neuen Termin in der Datenbank anlegen und die neue ID zurückgeben.
 //
 // @param  array $data  Erforderliche Schlüssel:
-//                        employer_id  – ID des Mitarbeiters
+//                        employer_id  – primäre Mitarbeiter-ID (für Rückwärtskompatibilität)
+//                        employer_ids – Array aller zugewiesenen Mitarbeiter-IDs
 //                        user_id      – ID des angemeldeten Nutzers
 //                        date         – Startdatum (Y-m-d)
 //                        date_to      – Enddatum (Y-m-d, >= date; gleich date für eintägige Termine)
@@ -213,6 +230,20 @@ function dbCreateEvent(array $data): int
     $newId = (int)$conn->insert_id;
 
     $stmt->close();
+
+    // Alle Mitarbeiter-Zuweisungen in die Junction-Tabelle eintragen
+    $employerIds = !empty($data['employer_ids']) && is_array($data['employer_ids'])
+        ? $data['employer_ids']
+        : [$data['employer_id']];
+
+    $stmtEmp = $conn->prepare('INSERT IGNORE INTO event_employers (event_id, employer_id) VALUES (?, ?)');
+    foreach ($employerIds as $eid) {
+        $eid = (int)$eid;
+        $stmtEmp->bind_param('ii', $newId, $eid);
+        $stmtEmp->execute();
+    }
+    $stmtEmp->close();
+
     $conn->close();
 
     return $newId;
@@ -224,7 +255,8 @@ function dbCreateEvent(array $data): int
 // @param  int   $id    ID des zu ändernden Termins
 // @param  array $data  Zu aktualisierende Felder:
 //                        date, date_to, start_time, end_time,
-//                        category, color, is_all_day, title
+//                        category, color, is_all_day, title,
+//                        employer_ids (optional) – Array aller zugewiesenen Mitarbeiter-IDs
 // @return bool         true, wenn mindestens eine Zeile geändert wurde
 // ============================================================
 function dbUpdateEvent(int $id, array $data): bool
@@ -272,6 +304,25 @@ function dbUpdateEvent(int $id, array $data): bool
     $changed = $stmt->affected_rows > 0;
 
     $stmt->close();
+
+    // Mitarbeiter-Zuweisungen aktualisieren, wenn employer_ids übergeben wurden
+    if (!empty($data['employer_ids']) && is_array($data['employer_ids'])) {
+        $employerIds = array_map('intval', $data['employer_ids']);
+
+        // Bestehende Zuweisungen löschen und neu setzen
+        $stmtDel = $conn->prepare('DELETE FROM event_employers WHERE event_id = ?');
+        $stmtDel->bind_param('i', $id);
+        $stmtDel->execute();
+        $stmtDel->close();
+
+        $stmtEmp = $conn->prepare('INSERT IGNORE INTO event_employers (event_id, employer_id) VALUES (?, ?)');
+        foreach ($employerIds as $eid) {
+            $stmtEmp->bind_param('ii', $id, $eid);
+            $stmtEmp->execute();
+        }
+        $stmtEmp->close();
+    }
+
     $conn->close();
 
     return $changed;

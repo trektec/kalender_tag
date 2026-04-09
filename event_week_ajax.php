@@ -36,6 +36,14 @@ define('DB_PORT', 3306);
 //     INDEX idx_employer (employer_id)
 // ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 //
+// -- Junction table for many-to-many event-employer assignments:
+// CREATE TABLE IF NOT EXISTS event_employers (
+//     event_id     INT UNSIGNED NOT NULL,
+//     employer_id  INT UNSIGNED NOT NULL,
+//     PRIMARY KEY (event_id, employer_id),
+//     INDEX idx_ee_employer (employer_id)
+// ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+//
 // To add date_to to an existing table:
 //   ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
 // ============================================================
@@ -50,7 +58,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // CREATE a new event
     // ----------------------------------------------------------
     if ($action === 'create') {
-        $employerId = isset($_POST['employer_id']) ? $_POST['employer_id'] : '';
+        // Accept employer_ids[] array (multi-employer) or fall back to single employer_id
+        $employerIdsRaw = isset($_POST['employer_ids']) && is_array($_POST['employer_ids'])
+            ? $_POST['employer_ids']
+            : (isset($_POST['employer_id']) ? [$_POST['employer_id']] : []);
+        $employerIds = [];
+        foreach ($employerIdsRaw as $eid) {
+            if (filter_var($eid, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false) {
+                $employerIds[] = (int)$eid;
+            }
+        }
+        if (empty($employerIds)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Ungültige oder fehlende Mitarbeiter-ID(s).']);
+            exit;
+        }
+        $employerId = $employerIds[0]; // primary employer for backward compatibility
+
         $userId     = isset($_POST['user_id'])     ? $_POST['user_id']     : '1';
         $date       = isset($_POST['date'])        ? trim($_POST['date'])  : '';
         $title      = isset($_POST['title'])       ? trim($_POST['title']) : '';
@@ -60,12 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $startTime  = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
         $endTime    = isset($_POST['end_time'])    ? trim($_POST['end_time'])   : '';
         $dateTo     = isset($_POST['date_to'])     ? trim($_POST['date_to'])    : '';
-
-        if (filter_var($employerId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Ungültige Mitarbeiter-ID.']);
-            exit;
-        }
 
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             http_response_code(400);
@@ -110,9 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $employerId = (int)$employerId;
-        $userId     = filter_var($userId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
-                      ? (int)$userId : 1;
+        $userId      = filter_var($userId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
+                       ? (int)$userId : 1;
         $isAllDayInt = $isAllDay ? 1 : 0;
 
         $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
@@ -145,20 +162,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute();
         $newId = (int)$conn->insert_id;
         $stmt->close();
+
+        // Insert all employer assignments into the event_employers junction table
+        $stmtEmp = $conn->prepare('INSERT IGNORE INTO event_employers (event_id, employer_id) VALUES (?, ?)');
+        foreach ($employerIds as $eid) {
+            $stmtEmp->bind_param('ii', $newId, $eid);
+            $stmtEmp->execute();
+        }
+        $stmtEmp->close();
         $conn->close();
 
         $newEvent = [
-            'id'          => $newId,
-            'employer_id' => $employerId,
-            'user_id'     => $userId,
-            'date'        => $date,
-            'date_to'     => $dateTo,
-            'start_time'  => $startTime ?? '',
-            'end_time'    => $endTime   ?? '',
-            'category'    => $category,
-            'color'       => $color,
-            'is_all_day'  => $isAllDay,
-            'title'       => $title,
+            'id'           => $newId,
+            'employer_id'  => $employerId,
+            'employer_ids' => $employerIds,
+            'user_id'      => $userId,
+            'date'         => $date,
+            'date_to'      => $dateTo,
+            'start_time'   => $startTime ?? '',
+            'end_time'     => $endTime   ?? '',
+            'category'     => $category,
+            'color'        => $color,
+            'is_all_day'   => $isAllDay,
+            'title'        => $title,
         ];
 
         echo json_encode(['success' => true, 'event' => $newEvent]);
@@ -335,15 +361,18 @@ if ($conn->connect_error) {
 $conn->set_charset('utf8mb4');
 
 $stmt = $conn->prepare(
-    'SELECT id, employer_id, user_id,
-            DATE_FORMAT(date,    \'%Y-%m-%d\') AS date,
-            DATE_FORMAT(date_to, \'%Y-%m-%d\') AS date_to,
-            IFNULL(TIME_FORMAT(start_time, \'%H:%i\'), \'\') AS start_time,
-            IFNULL(TIME_FORMAT(end_time,   \'%H:%i\'), \'\') AS end_time,
-            category, color, is_all_day, title
-     FROM   events
-     WHERE  date <= ? AND COALESCE(date_to, date) >= ? AND deleted = 0
-     ORDER  BY date ASC, is_all_day DESC, start_time ASC'
+    'SELECT e.id, e.employer_id, e.user_id,
+            DATE_FORMAT(e.date,    \'%Y-%m-%d\') AS date,
+            DATE_FORMAT(e.date_to, \'%Y-%m-%d\') AS date_to,
+            IFNULL(TIME_FORMAT(e.start_time, \'%H:%i\'), \'\') AS start_time,
+            IFNULL(TIME_FORMAT(e.end_time,   \'%H:%i\'), \'\') AS end_time,
+            e.category, e.color, e.is_all_day, e.title,
+            GROUP_CONCAT(DISTINCT ee.employer_id ORDER BY ee.employer_id) AS employer_ids_str
+     FROM   events e
+     LEFT JOIN event_employers ee ON ee.event_id = e.id
+     WHERE  e.date <= ? AND COALESCE(e.date_to, e.date) >= ? AND e.deleted = 0
+     GROUP  BY e.id
+     ORDER  BY e.date ASC, e.is_all_day DESC, e.start_time ASC'
 );
 $stmt->bind_param('ss', $endDate, $requestedStartDate);
 $stmt->execute();
@@ -358,6 +387,11 @@ while ($row = $result->fetch_assoc()) {
     $row['is_all_day']  = (bool)$row['is_all_day'];
     // Normalize date_to: fall back to date if not set
     $row['date_to']     = $row['date_to'] ?? $row['date'];
+    // Parse employer_ids from GROUP_CONCAT result; fall back to primary employer_id
+    $row['employer_ids'] = $row['employer_ids_str'] !== null
+        ? array_map('intval', explode(',', $row['employer_ids_str']))
+        : [$row['employer_id']];
+    unset($row['employer_ids_str']);
     $events[]           = $row;
 }
 

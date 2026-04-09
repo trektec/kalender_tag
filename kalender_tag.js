@@ -997,14 +997,19 @@ function openNewEventModal() {
     const modal = document.getElementById('newEventModal');
     if (!modal) return;
 
-    // Populate employer dropdown from the loaded employers array
-    const employerSelect = document.getElementById('newEventEmployer');
-    employerSelect.innerHTML = '';
+    // Populate employer checkboxes from the loaded employers array
+    const employerList = document.getElementById('newEventEmployers');
+    employerList.innerHTML = '';
     employers.forEach(emp => {
-        const option = document.createElement('option');
-        option.value = emp.id;
-        option.textContent = emp.name;
-        employerSelect.appendChild(option);
+        const label = document.createElement('label');
+        label.className = 'employer-checkbox-item';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = emp.id;
+        checkbox.name = 'newEventEmployerCheckbox';
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(emp.name));
+        employerList.appendChild(label);
     });
 
     // Reset fields
@@ -1037,7 +1042,9 @@ function toggleNewEventTimeFields(show) {
 
 // Create a new event via event_iec_ajax2.php
 async function createEventFromModal() {
-    const employerId = document.getElementById('newEventEmployer').value;
+    const selectedEmployerIds = Array.from(
+        document.querySelectorAll('#newEventEmployers input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
     const category = document.getElementById('newEventCategory').value.trim();
@@ -1046,6 +1053,11 @@ async function createEventFromModal() {
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
+
+    if (selectedEmployerIds.length === 0) {
+        alert('Bitte mindestens einen Mitarbeiter auswählen.');
+        return;
+    }
 
     if (!date) {
         alert('Bitte ein Datum angeben.');
@@ -1065,47 +1077,51 @@ async function createEventFromModal() {
     const userId = CURRENT_USER_ID !== null && CURRENT_USER_ID !== undefined
         ? CURRENT_USER_ID : 1;
 
+    const currentDateStr = formatDateForAPI(currentDate);
+
     try {
-        const formData = new FormData();
-        formData.append('action', 'create');
-        formData.append('employer_id', employerId);
-        formData.append('user_id', String(userId));
-        formData.append('date', date);
-        formData.append('date_to', dateTo);
-        formData.append('title', title);
-        formData.append('category', category);
-        formData.append('color', color);
-        formData.append('is_all_day', isAllDay ? '1' : '0');
-        formData.append('start_time', isAllDay ? '' : startTime);
-        formData.append('end_time', isAllDay ? '' : endTime);
+        for (const employerId of selectedEmployerIds) {
+            const formData = new FormData();
+            formData.append('action', 'create');
+            formData.append('employer_id', employerId);
+            formData.append('user_id', String(userId));
+            formData.append('date', date);
+            formData.append('date_to', dateTo);
+            formData.append('title', title);
+            formData.append('category', category);
+            formData.append('color', color);
+            formData.append('is_all_day', isAllDay ? '1' : '0');
+            formData.append('start_time', isAllDay ? '' : startTime);
+            formData.append('end_time', isAllDay ? '' : endTime);
 
-        const response = await fetch('event_iec_ajax2.php', {
-            method: 'POST',
-            body: formData
-        });
+            const response = await fetch('event_iec_ajax2.php', {
+                method: 'POST',
+                body: formData
+            });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-        const result = await response.json();
+            const result = await response.json();
 
-        if (!result.success) {
-            alert(result.message || 'Fehler beim Erstellen des Termins.');
-            return;
-        }
+            if (!result.success) {
+                alert(result.message || 'Fehler beim Erstellen des Termins.');
+                return;
+            }
 
-        // Add the new event to the local array only if it covers the current date
-        const currentDateStr = formatDateForAPI(currentDate);
-        if (result.event) {
-            const effectiveDateTo = result.event.date_to || result.event.date;
-            if (result.event.date <= currentDateStr && effectiveDateTo >= currentDateStr) {
-                events.push(result.event);
-                // Re-render events
-                document.querySelectorAll('.event-block').forEach(el => el.remove());
-                renderEvents();
+            // Add the new event to the local array only if it covers the current date
+            if (result.event) {
+                const effectiveDateTo = result.event.date_to || result.event.date;
+                if (result.event.date <= currentDateStr && effectiveDateTo >= currentDateStr) {
+                    events.push(result.event);
+                }
             }
         }
+
+        // Re-render events once after all have been created
+        document.querySelectorAll('.event-block').forEach(el => el.remove());
+        renderEvents();
 
     } catch (error) {
         console.error('Fehler beim Erstellen des Termins:', error);

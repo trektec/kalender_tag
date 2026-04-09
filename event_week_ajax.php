@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $endDate = $date;
             } else {
                 $dtEnd = DateTime::createFromFormat('Y-m-d', $endDate);
-                if (!$dtEnd || $dtEnd->format('Y-m-d') !== $endDate || $endDate < $date) {
+                if (!$dtEnd || $dtEnd->format('Y-m-d') !== $endDate || $dtEnd < $dt) {
                     $endDate = $date;
                 }
             }
@@ -226,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $endDate = $date;
             } else {
                 $dtEnd = DateTime::createFromFormat('Y-m-d', $endDate);
-                if (!$dtEnd || $dtEnd->format('Y-m-d') !== $endDate || $endDate < $date) {
+                if (!$dtEnd || $dtEnd->format('Y-m-d') !== $endDate || $dtEnd < $dt) {
                     $endDate = $date;
                 }
             }

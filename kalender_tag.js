@@ -121,6 +121,12 @@ function formatDateForAPI(date) {
     return `${year}-${month}-${day}`;
 }
 
+// Format an ISO date string (YYYY-MM-DD) as a human-readable date (DD.MM.YYYY)
+function formatDateForDisplay(isoDateStr) {
+    const parts = isoDateStr.split('-');
+    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+}
+
 // Load employers from server
 async function loadEmployers() {
     const calendarDiv = document.getElementById('calendar');
@@ -773,9 +779,7 @@ function addTooltipToEvent(eventBlock, event) {
         if (event.is_all_day) {
             const endDate = event.end_date || event.date;
             if (endDate !== event.date) {
-                const startParts = event.date.split('-');
-                const endParts = endDate.split('-');
-                timeInfo = `Ganztägig: ${startParts[2]}.${startParts[1]}.${startParts[0]} – ${endParts[2]}.${endParts[1]}.${endParts[0]}`;
+                timeInfo = `Ganztägig: ${formatDateForDisplay(event.date)} – ${formatDateForDisplay(endDate)}`;
             } else {
                 timeInfo = 'Ganztägig';
             }

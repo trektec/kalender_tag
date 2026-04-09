@@ -22,6 +22,7 @@
 //        employer_id  INT UNSIGNED    NOT NULL,
 //        user_id      INT UNSIGNED    NOT NULL,
 //        date         DATE            NOT NULL,
+//        end_date     DATE            NOT NULL,
 //        start_time   TIME            NULL,
 //        end_time     TIME            NULL,
 //        category     VARCHAR(100)    NOT NULL DEFAULT '',
@@ -33,8 +34,13 @@
 //        updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
 //                                              ON UPDATE CURRENT_TIMESTAMP,
 //        INDEX idx_date     (date),
+//        INDEX idx_end_date (end_date),
 //        INDEX idx_employer (employer_id)
 //    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+//
+//    -- Migration für bestehende Tabellen ohne end_date-Spalte:
+//    -- ALTER TABLE events ADD COLUMN end_date DATE NOT NULL DEFAULT '0000-00-00' AFTER date;
+//    -- UPDATE events SET end_date = date WHERE end_date = '0000-00-00';
 //
 // 2. ZUGANGSDATEN EINTRAGEN
 //    Passe die vier Konstanten DB_HOST, DB_USER, DB_PASS und
@@ -120,16 +126,17 @@ function dbGetEvents(string $date): array
     // Ganztags-Termine werden zuerst angezeigt, danach nach Startzeit sortiert
     $stmt = $conn->prepare(
         'SELECT id, employer_id, user_id,
-                DATE_FORMAT(date, \'%Y-%m-%d\') AS date,
+                DATE_FORMAT(date,     \'%Y-%m-%d\') AS date,
+                DATE_FORMAT(end_date, \'%Y-%m-%d\') AS end_date,
                 IFNULL(TIME_FORMAT(start_time, \'%H:%i\'), \'\') AS start_time,
                 IFNULL(TIME_FORMAT(end_time,   \'%H:%i\'), \'\') AS end_time,
                 category, color, is_all_day, title
          FROM   events
-         WHERE  date = ? AND deleted = 0
+         WHERE  date <= ? AND end_date >= ? AND deleted = 0
          ORDER  BY is_all_day DESC, start_time ASC'
     );
 
-    $stmt->bind_param('s', $date);
+    $stmt->bind_param('ss', $date, $date);
     $stmt->execute();
 
     $result = $stmt->get_result();
@@ -156,7 +163,8 @@ function dbGetEvents(string $date): array
 // @param  array $data  Erforderliche Schlüssel:
 //                        employer_id  – ID des Mitarbeiters
 //                        user_id      – ID des angemeldeten Nutzers
-//                        date         – Datum (Y-m-d)
+//                        date         – Startdatum (Y-m-d)
+//                        end_date     – Enddatum   (Y-m-d); gleich date für eintägige Termine
 //                        start_time   – Startzeit (HH:MM) oder ''
 //                        end_time     – Endzeit   (HH:MM) oder ''
 //                        category     – Kategorie (z. B. 'meeting')
@@ -171,22 +179,24 @@ function dbCreateEvent(array $data): int
 
     $stmt = $conn->prepare(
         'INSERT INTO events
-             (employer_id, user_id, date, start_time, end_time,
+             (employer_id, user_id, date, end_date, start_time, end_time,
               category, color, is_all_day, title)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
 
     // Bei Ganztags-Terminen werden Startzeit und Endzeit auf NULL gesetzt
     $isAllDay  = $data['is_all_day'] ? 1 : 0;
     $startTime = $isAllDay ? null : ($data['start_time'] ?: null);
     $endTime   = $isAllDay ? null : ($data['end_time']   ?: null);
+    $endDate   = $data['end_date'] ?? $data['date'];
 
     // Parametertypen: i=int, s=string
     $stmt->bind_param(
-        'iisssssis',
+        'iissssssis',
         $data['employer_id'],
         $data['user_id'],
         $data['date'],
+        $endDate,
         $startTime,
         $endTime,
         $data['category'],
@@ -211,7 +221,7 @@ function dbCreateEvent(array $data): int
 //
 // @param  int   $id    ID des zu ändernden Termins
 // @param  array $data  Zu aktualisierende Felder:
-//                        date, start_time, end_time,
+//                        date, end_date, start_time, end_time,
 //                        category, color, is_all_day, title
 // @return bool         true, wenn mindestens eine Zeile geändert wurde
 // ============================================================
@@ -223,6 +233,7 @@ function dbUpdateEvent(int $id, array $data): bool
     $stmt = $conn->prepare(
         'UPDATE events
          SET    date       = ?,
+                end_date   = ?,
                 start_time = ?,
                 end_time   = ?,
                 category   = ?,
@@ -236,10 +247,12 @@ function dbUpdateEvent(int $id, array $data): bool
     $isAllDay  = $data['is_all_day'] ? 1 : 0;
     $startTime = $isAllDay ? null : ($data['start_time'] ?: null);
     $endTime   = $isAllDay ? null : ($data['end_time']   ?: null);
+    $endDate   = $data['end_date'] ?? $data['date'];
 
     $stmt->bind_param(
-        'sssssisi',
+        'ssssssisi',
         $data['date'],
+        $endDate,
         $startTime,
         $endTime,
         $data['category'],

@@ -21,6 +21,7 @@ define('DB_PORT', 3306);
 //     employer_id  INT UNSIGNED    NOT NULL,
 //     user_id      INT UNSIGNED    NOT NULL,
 //     date         DATE            NOT NULL,
+//     end_date     DATE            NOT NULL,
 //     start_time   TIME            NULL,
 //     end_time     TIME            NULL,
 //     category     VARCHAR(100)    NOT NULL DEFAULT '',
@@ -31,9 +32,14 @@ define('DB_PORT', 3306);
 //     created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
 //     updated_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP
 //                                           ON UPDATE CURRENT_TIMESTAMP,
-//     INDEX idx_date (date),
+//     INDEX idx_date     (date),
+//     INDEX idx_end_date (end_date),
 //     INDEX idx_employer (employer_id)
 // ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+//
+// -- Migration für bestehende Tabellen ohne end_date-Spalte:
+// -- ALTER TABLE events ADD COLUMN end_date DATE NOT NULL DEFAULT '0000-00-00' AFTER date;
+// -- UPDATE events SET end_date = date WHERE end_date = '0000-00-00';
 // ============================================================
 
 // ============================================================
@@ -49,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $employerId = isset($_POST['employer_id']) ? $_POST['employer_id'] : '';
         $userId     = isset($_POST['user_id'])     ? $_POST['user_id']     : '1';
         $date       = isset($_POST['date'])        ? trim($_POST['date'])  : '';
+        $endDate    = isset($_POST['end_date'])    ? trim($_POST['end_date']) : '';
         $title      = isset($_POST['title'])       ? trim($_POST['title']) : '';
         $category   = isset($_POST['category'])    ? trim($_POST['category']) : '';
         $color      = isset($_POST['color'])       ? trim($_POST['color']) : '#4a90e2';
@@ -90,9 +97,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Ungültige Start- oder Endzeit.']);
                 exit;
             }
+            // Timed events are always single-day
+            $endDate = $date;
         } else {
             $startTime = null;
             $endTime   = null;
+            // Validate end_date for all-day events
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+                $endDate = $date;
+            } else {
+                $dtEnd = DateTime::createFromFormat('Y-m-d', $endDate);
+                if (!$dtEnd || $dtEnd->format('Y-m-d') !== $endDate || $endDate < $date) {
+                    $endDate = $date;
+                }
+            }
         }
 
         $employerId = (int)$employerId;
@@ -110,15 +128,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $conn->prepare(
             'INSERT INTO events
-                 (employer_id, user_id, date, start_time, end_time,
+                 (employer_id, user_id, date, end_date, start_time, end_time,
                   category, color, is_all_day, title)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->bind_param(
-            'iisssssis',
+            'iissssssis',
             $employerId,
             $userId,
             $date,
+            $endDate,
             $startTime,
             $endTime,
             $category,
@@ -136,6 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'employer_id' => $employerId,
             'user_id'     => $userId,
             'date'        => $date,
+            'end_date'    => $endDate,
             'start_time'  => $startTime ?? '',
             'end_time'    => $endTime   ?? '',
             'category'    => $category,
@@ -152,14 +172,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // EDIT (update) an existing event
     // ----------------------------------------------------------
     if ($action === 'edit') {
-        $eventId   = isset($_POST['event_id'])   ? $_POST['event_id']         : '';
-        $date      = isset($_POST['date'])        ? trim($_POST['date'])       : '';
-        $title     = isset($_POST['title'])       ? trim($_POST['title'])      : '';
-        $category  = isset($_POST['category'])    ? trim($_POST['category'])   : '';
-        $color     = isset($_POST['color'])       ? trim($_POST['color'])      : '#4a90e2';
+        $eventId   = isset($_POST['event_id'])   ? $_POST['event_id']          : '';
+        $date      = isset($_POST['date'])        ? trim($_POST['date'])        : '';
+        $endDate   = isset($_POST['end_date'])    ? trim($_POST['end_date'])    : '';
+        $title     = isset($_POST['title'])       ? trim($_POST['title'])       : '';
+        $category  = isset($_POST['category'])    ? trim($_POST['category'])    : '';
+        $color     = isset($_POST['color'])       ? trim($_POST['color'])       : '#4a90e2';
         $isAllDay  = isset($_POST['is_all_day'])  ? (bool)$_POST['is_all_day'] : false;
-        $startTime = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
-        $endTime   = isset($_POST['end_time'])    ? trim($_POST['end_time'])   : '';
+        $startTime = isset($_POST['start_time'])  ? trim($_POST['start_time'])  : '';
+        $endTime   = isset($_POST['end_time'])    ? trim($_POST['end_time'])    : '';
 
         if (filter_var($eventId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
             http_response_code(400);
@@ -195,9 +216,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Ungültige Start- oder Endzeit.']);
                 exit;
             }
+            // Timed events are always single-day
+            $endDate = $date;
         } else {
             $startTime = null;
             $endTime   = null;
+            // Validate end_date for all-day events
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+                $endDate = $date;
+            } else {
+                $dtEnd = DateTime::createFromFormat('Y-m-d', $endDate);
+                if (!$dtEnd || $dtEnd->format('Y-m-d') !== $endDate || $endDate < $date) {
+                    $endDate = $date;
+                }
+            }
         }
 
         $eventId     = (int)$eventId;
@@ -214,6 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $conn->prepare(
             'UPDATE events
              SET    date       = ?,
+                    end_date   = ?,
                     start_time = ?,
                     end_time   = ?,
                     category   = ?,
@@ -223,8 +256,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              WHERE  id = ? AND deleted = 0'
         );
         $stmt->bind_param(
-            'sssssisi',
+            'ssssssisi',
             $date,
+            $endDate,
             $startTime,
             $endTime,
             $category,
@@ -306,15 +340,16 @@ $conn->set_charset('utf8mb4');
 
 $stmt = $conn->prepare(
     'SELECT id, employer_id, user_id,
-            DATE_FORMAT(date, \'%Y-%m-%d\') AS date,
+            DATE_FORMAT(date,     \'%Y-%m-%d\') AS date,
+            DATE_FORMAT(end_date, \'%Y-%m-%d\') AS end_date,
             IFNULL(TIME_FORMAT(start_time, \'%H:%i\'), \'\') AS start_time,
             IFNULL(TIME_FORMAT(end_time,   \'%H:%i\'), \'\') AS end_time,
             category, color, is_all_day, title
      FROM   events
-     WHERE  date BETWEEN ? AND ? AND deleted = 0
+     WHERE  date <= ? AND end_date >= ? AND deleted = 0
      ORDER  BY date ASC, is_all_day DESC, start_time ASC'
 );
-$stmt->bind_param('ss', $requestedStartDate, $endDate);
+$stmt->bind_param('ss', $endDate, $requestedStartDate);
 $stmt->execute();
 
 $result = $stmt->get_result();

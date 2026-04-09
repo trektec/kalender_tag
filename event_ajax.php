@@ -53,8 +53,9 @@ if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
 
 // Sample event data for employees
 // In a real application, this would come from a database
-// Structure: id, employer_id, user_id, date, start_time, end_time, category, color, is_all_day, title
+// Structure: id, employer_id, user_id, date, end_date, start_time, end_time, category, color, is_all_day, title
 // user_id identifies the user who created the event
+// end_date: same as date for single-day events; later date for multi-day all-day events
 
 $events = [
     // Max Mustermann (employer_id: 1)
@@ -258,9 +259,10 @@ $events = [
     ]
 ];
 
-// Filter events by requested date
+// Filter events by requested date (events where start_date <= requestedDate AND end_date >= requestedDate)
 $filteredEvents = array_filter($events, function($event) use ($requestedDate) {
-    return $event['date'] === $requestedDate;
+    $endDate = isset($event['end_date']) ? $event['end_date'] : $event['date'];
+    return $event['date'] <= $requestedDate && $endDate >= $requestedDate;
 });
 
 // Re-index the array to ensure proper JSON encoding

@@ -37,8 +37,12 @@
             <div class="edit-modal-body">
                 <input type="hidden" id="editEventId">
                 <div class="edit-modal-field">
-                    <label for="editEventDate">Datum</label>
+                    <label for="editEventDate">Startdatum</label>
                     <input type="date" id="editEventDate">
+                </div>
+                <div id="editEventEndDateField" class="edit-modal-field" style="display:none;">
+                    <label for="editEventEndDate">Enddatum</label>
+                    <input type="date" id="editEventEndDate">
                 </div>
                 <div class="edit-modal-field">
                     <label for="editEventTitle">Titel</label>
@@ -87,8 +91,12 @@
                     <select id="newEventEmployer"></select>
                 </div>
                 <div class="edit-modal-field">
-                    <label for="newEventDate">Datum</label>
+                    <label for="newEventDate">Startdatum</label>
                     <input type="date" id="newEventDate">
+                </div>
+                <div id="newEventEndDateField" class="edit-modal-field" style="display:none;">
+                    <label for="newEventEndDate">Enddatum</label>
+                    <input type="date" id="newEventEndDate">
                 </div>
                 <div class="edit-modal-field">
                     <label for="newEventTitle">Titel</label>

@@ -281,17 +281,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ============================================================
-// GET – return events for the requested date
+// GET – return events for the requested date range
 // ============================================================
-$requestedDate = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
+$requestedStartDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-d');
 
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedDate)) {
-    $requestedDate = date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedStartDate)) {
+    $requestedStartDate = date('Y-m-d');
 }
-$dateTime = DateTime::createFromFormat('Y-m-d', $requestedDate);
-if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
-    $requestedDate = date('Y-m-d');
+$dateTime = DateTime::createFromFormat('Y-m-d', $requestedStartDate);
+if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedStartDate) {
+    $requestedStartDate = date('Y-m-d');
 }
+
+// Calculate end date (start date + 6 days)
+$endDate = date('Y-m-d', strtotime($requestedStartDate . ' +6 days'));
 
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
 if ($conn->connect_error) {
@@ -308,10 +311,10 @@ $stmt = $conn->prepare(
             IFNULL(TIME_FORMAT(end_time,   \'%H:%i\'), \'\') AS end_time,
             category, color, is_all_day, title
      FROM   events
-     WHERE  date = ? AND deleted = 0
-     ORDER  BY is_all_day DESC, start_time ASC'
+     WHERE  date BETWEEN ? AND ? AND deleted = 0
+     ORDER  BY date ASC, is_all_day DESC, start_time ASC'
 );
-$stmt->bind_param('s', $requestedDate);
+$stmt->bind_param('ss', $requestedStartDate, $endDate);
 $stmt->execute();
 
 $result = $stmt->get_result();

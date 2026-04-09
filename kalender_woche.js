@@ -655,10 +655,18 @@ function addTooltipToEvent(eventBlock, event) {
             timeInfo = `${event.start_time} - ${event.end_time}`;
         }
         
-        // Include employee name in tooltip (look up from loaded employers list)
-        const employer = employers.find(e => String(e.id) === String(event.employer_id));
-        const employerName = employer ? employer.name : (event.employer_name || '');
-        const employeeInfo = employerName ? `\nMitarbeiter: ${employerName}` : '';
+        // Include employee name(s) in tooltip (look up from loaded employers list)
+        let employerNames;
+        if (Array.isArray(event.employer_ids) && event.employer_ids.length > 0) {
+            employerNames = event.employer_ids.map(id => {
+                const emp = employers.find(e => String(e.id) === String(id));
+                return emp ? emp.name : '';
+            }).filter(Boolean).join(', ');
+        } else {
+            const employer = employers.find(e => String(e.id) === String(event.employer_id));
+            employerNames = employer ? employer.name : (event.employer_name || '');
+        }
+        const employeeInfo = employerNames ? `\nMitarbeiter: ${employerNames}` : '';
         const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}${employeeInfo}`;
         
         // Create tooltip
@@ -922,7 +930,8 @@ function toggleNewEventTimeFields(show) {
 
 // Create a new event via event_week_ajax.php
 async function createEventFromModal() {
-    const employerId = document.getElementById('newEventEmployer').value;
+    const employerSelect = document.getElementById('newEventEmployer');
+    const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
     const category = document.getElementById('newEventCategory').value.trim();
@@ -931,6 +940,11 @@ async function createEventFromModal() {
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
+
+    if (employerIds.length === 0) {
+        alert('Bitte mindestens einen Mitarbeiter auswählen.');
+        return;
+    }
 
     if (!date) {
         alert('Bitte ein Datum angeben.');
@@ -953,7 +967,7 @@ async function createEventFromModal() {
     try {
         const formData = new FormData();
         formData.append('action', 'create');
-        formData.append('employer_id', employerId);
+        employerIds.forEach(id => formData.append('employer_ids[]', id));
         formData.append('user_id', String(userId));
         formData.append('date', date);
         formData.append('date_to', dateTo);

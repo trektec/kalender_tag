@@ -224,16 +224,23 @@ function getHeaderHeight() {
     return EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
 }
 
+// Helper: returns an array of employer ID strings for an event,
+// supporting both multi-employer (employer_ids array) and legacy single employer_id.
+function getEmployerIds(event) {
+    return Array.isArray(event.employer_ids)
+        ? event.employer_ids.map(String)
+        : [String(event.employer_id)];
+}
+
 // Calculate the height needed for all-day section for each employer
 function calculateAllDayHeights() {
     const allDayHeights = {};
     let maxAllDayEvents = 0; // Start with 0
-    
+
     // Group events by employer
     employers.forEach(employer => {
-        const employerAllDayEvents = events.filter(
-            // Use String() conversion for type-safe comparison (DB may return string IDs)
-            e => String(e.employer_id) === String(employer.id) && e.is_all_day
+        const employerAllDayEvents = events.filter(e =>
+            getEmployerIds(e).includes(String(employer.id)) && e.is_all_day
         );
         const count = employerAllDayEvents.length;
         allDayHeights[employer.id] = count;
@@ -566,18 +573,23 @@ function renderEvents() {
     const eventsByEmployer = {};
     
     events.forEach(event => {
-        if (!eventsByEmployer[event.employer_id]) {
-            eventsByEmployer[event.employer_id] = {
-                allDay: [],
-                timed: []
-            };
-        }
-        
-        if (event.is_all_day) {
-            eventsByEmployer[event.employer_id].allDay.push(event);
-        } else {
-            eventsByEmployer[event.employer_id].timed.push(event);
-        }
+        // Support employer_ids array (multi-employer) or fall back to single employer_id
+        const ids = getEmployerIds(event);
+
+        ids.forEach(empId => {
+            if (!eventsByEmployer[empId]) {
+                eventsByEmployer[empId] = {
+                    allDay: [],
+                    timed: []
+                };
+            }
+
+            if (event.is_all_day) {
+                eventsByEmployer[empId].allDay.push(event);
+            } else {
+                eventsByEmployer[empId].timed.push(event);
+            }
+        });
     });
     
     // Render events for each employer
@@ -1037,7 +1049,8 @@ function toggleNewEventTimeFields(show) {
 
 // Create a new event via event_iec_ajax2.php
 async function createEventFromModal() {
-    const employerId = document.getElementById('newEventEmployer').value;
+    const employerSelect = document.getElementById('newEventEmployer');
+    const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
     const category = document.getElementById('newEventCategory').value.trim();
@@ -1046,6 +1059,11 @@ async function createEventFromModal() {
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
+
+    if (employerIds.length === 0) {
+        alert('Bitte mindestens einen Mitarbeiter auswählen.');
+        return;
+    }
 
     if (!date) {
         alert('Bitte ein Datum angeben.');
@@ -1068,7 +1086,7 @@ async function createEventFromModal() {
     try {
         const formData = new FormData();
         formData.append('action', 'create');
-        formData.append('employer_id', employerId);
+        employerIds.forEach(id => formData.append('employer_ids[]', id));
         formData.append('user_id', String(userId));
         formData.append('date', date);
         formData.append('date_to', dateTo);

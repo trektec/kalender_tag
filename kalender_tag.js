@@ -229,12 +229,14 @@ function calculateAllDayHeights() {
     const allDayHeights = {};
     let maxAllDayEvents = 0; // Start with 0
     
-    // Group events by employer
+    // Group events by employer – a multi-employer event counts for each of its employers
     employers.forEach(employer => {
-        const employerAllDayEvents = events.filter(
-            // Use String() conversion for type-safe comparison (DB may return string IDs)
-            e => String(e.employer_id) === String(employer.id) && e.is_all_day
-        );
+        const employerAllDayEvents = events.filter(e => {
+            if (!e.is_all_day) return false;
+            // Use employer_ids array when available (supports multi-employer events)
+            const ids = e.employer_ids || (e.employer_id != null ? [e.employer_id] : []);
+            return ids.map(String).includes(String(employer.id));
+        });
         const count = employerAllDayEvents.length;
         allDayHeights[employer.id] = count;
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
@@ -562,22 +564,26 @@ function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
 
 // Render event blocks for all employees
 function renderEvents() {
-    // Group events by employer and type (all-day vs timed)
+    // Group events by employer column.
+    // Multi-employer events (single_event=1) appear in each of their employer columns.
     const eventsByEmployer = {};
     
     events.forEach(event => {
-        if (!eventsByEmployer[event.employer_id]) {
-            eventsByEmployer[event.employer_id] = {
-                allDay: [],
-                timed: []
-            };
-        }
-        
-        if (event.is_all_day) {
-            eventsByEmployer[event.employer_id].allDay.push(event);
-        } else {
-            eventsByEmployer[event.employer_id].timed.push(event);
-        }
+        // Use employer_ids array when present; fall back to single employer_id for backwards compat
+        const ids = event.employer_ids || (event.employer_id != null ? [event.employer_id] : []);
+        ids.forEach(empId => {
+            if (!eventsByEmployer[empId]) {
+                eventsByEmployer[empId] = {
+                    allDay: [],
+                    timed: []
+                };
+            }
+            if (event.is_all_day) {
+                eventsByEmployer[empId].allDay.push(event);
+            } else {
+                eventsByEmployer[empId].timed.push(event);
+            }
+        });
     });
     
     // Render events for each employer
@@ -822,6 +828,33 @@ function openEditModal(event) {
     const modal = document.getElementById('eventEditModal');
     if (!modal) return;
 
+    const singleEvent = event.single_event === 1 ? 1 : 0;
+    const employerIds = event.employer_ids || (event.employer_id != null ? [event.employer_id] : []);
+
+    // Populate both employer selects
+    const singleSelect = document.getElementById('editEventEmployer');
+    const multiSelect  = document.getElementById('editEventEmployerMulti');
+    singleSelect.innerHTML = '';
+    multiSelect.innerHTML  = '';
+    employers.forEach(emp => {
+        const opt1 = document.createElement('option');
+        opt1.value = emp.id;
+        opt1.textContent = emp.name;
+        if (employerIds.map(String).includes(String(emp.id))) opt1.selected = true;
+        singleSelect.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = emp.id;
+        opt2.textContent = emp.name;
+        if (employerIds.map(String).includes(String(emp.id))) opt2.selected = true;
+        multiSelect.appendChild(opt2);
+    });
+
+    // Show the correct employer field depending on single_event
+    document.getElementById('editEventSingleEvent').value = singleEvent;
+    document.getElementById('editEventEmployerSingleField').style.display = singleEvent === 0 ? '' : 'none';
+    document.getElementById('editEventEmployerMultiField').style.display  = singleEvent === 1 ? '' : 'none';
+
     // Populate fields
     document.getElementById('editEventId').value = event.id;
     document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
@@ -909,6 +942,7 @@ async function saveEventFromModal() {
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
+    const singleEvent = parseInt(document.getElementById('editEventSingleEvent').value, 10) || 0;
 
     if (!date) {
         alert('Bitte ein Datum angeben.');
@@ -926,6 +960,22 @@ async function saveEventFromModal() {
         return;
     }
 
+    // Read employer selection
+    let employerIds = [];
+    if (singleEvent === 0) {
+        const sel = document.getElementById('editEventEmployer');
+        if (sel && sel.value) employerIds = [sel.value];
+    } else {
+        const multiSel = document.getElementById('editEventEmployerMulti');
+        if (multiSel) {
+            employerIds = Array.from(multiSel.selectedOptions).map(o => o.value);
+        }
+        if (employerIds.length === 0) {
+            alert('Bitte mindestens einen Mitarbeiter auswählen.');
+            return;
+        }
+    }
+
     try {
         const formData = new FormData();
         formData.append('action', 'edit');
@@ -938,6 +988,12 @@ async function saveEventFromModal() {
         formData.append('is_all_day', isAllDay ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
+        formData.append('single_event', String(singleEvent));
+        if (singleEvent === 0) {
+            formData.append('employer_id', employerIds[0] || '');
+        } else {
+            employerIds.forEach(eid => formData.append('employer_ids[]', eid));
+        }
 
         const response = await fetch('event_iec_ajax.php', {
             method: 'POST',
@@ -971,6 +1027,8 @@ async function saveEventFromModal() {
             // Event no longer covers the current date – remove from view
             events.splice(eventIndex, 1);
         } else {
+            const newEmployerId = singleEvent === 0 ? (parseInt(employerIds[0], 10) || null) : null;
+            const newEmployerIds = employerIds.map(Number);
             events[eventIndex] = {
                 ...events[eventIndex],
                 date,
@@ -980,7 +1038,10 @@ async function saveEventFromModal() {
                 color,
                 is_all_day: isAllDay,
                 start_time: isAllDay ? '' : startTime,
-                end_time: isAllDay ? '' : endTime
+                end_time: isAllDay ? '' : endTime,
+                single_event: singleEvent,
+                employer_id: newEmployerId,
+                employer_ids: newEmployerIds,
             };
         }
     }
@@ -997,15 +1058,27 @@ function openNewEventModal() {
     const modal = document.getElementById('newEventModal');
     if (!modal) return;
 
-    // Populate employer dropdown from the loaded employers array
-    const employerSelect = document.getElementById('newEventEmployer');
-    employerSelect.innerHTML = '';
+    // Populate both single and multi employer dropdowns from the loaded employers array
+    const employerSelect      = document.getElementById('newEventEmployer');
+    const employerMultiSelect = document.getElementById('newEventEmployerMulti');
+    employerSelect.innerHTML      = '';
+    employerMultiSelect.innerHTML = '';
     employers.forEach(emp => {
-        const option = document.createElement('option');
-        option.value = emp.id;
-        option.textContent = emp.name;
-        employerSelect.appendChild(option);
+        const opt1 = document.createElement('option');
+        opt1.value = emp.id;
+        opt1.textContent = emp.name;
+        employerSelect.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = emp.id;
+        opt2.textContent = emp.name;
+        employerMultiSelect.appendChild(opt2);
     });
+
+    // Reset multi-employer toggle
+    document.getElementById('newEventMultiEmployer').checked = false;
+    document.getElementById('newEventEmployerSingleField').style.display = '';
+    document.getElementById('newEventEmployerMultiField').style.display  = 'none';
 
     // Reset fields
     document.getElementById('newEventDate').value = formatDateForAPI(currentDate);
@@ -1037,7 +1110,26 @@ function toggleNewEventTimeFields(show) {
 
 // Create a new event via event_iec_ajax.php
 async function createEventFromModal() {
-    const employerId = document.getElementById('newEventEmployer').value;
+    const isMultiEmployer = document.getElementById('newEventMultiEmployer').checked;
+    const singleEvent     = isMultiEmployer ? 1 : 0;
+
+    let employerIds = [];
+    if (isMultiEmployer) {
+        const multiSel = document.getElementById('newEventEmployerMulti');
+        employerIds = Array.from(multiSel.selectedOptions).map(o => o.value);
+        if (employerIds.length === 0) {
+            alert('Bitte mindestens einen Mitarbeiter auswählen.');
+            return;
+        }
+    } else {
+        const employerId = document.getElementById('newEventEmployer').value;
+        if (!employerId) {
+            alert('Bitte einen Mitarbeiter auswählen.');
+            return;
+        }
+        employerIds = [employerId];
+    }
+
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
     const category = document.getElementById('newEventCategory').value.trim();
@@ -1068,7 +1160,12 @@ async function createEventFromModal() {
     try {
         const formData = new FormData();
         formData.append('action', 'create');
-        formData.append('employer_id', employerId);
+        formData.append('single_event', String(singleEvent));
+        if (singleEvent === 0) {
+            formData.append('employer_id', employerIds[0]);
+        } else {
+            employerIds.forEach(eid => formData.append('employer_ids[]', eid));
+        }
         formData.append('user_id', String(userId));
         formData.append('date', date);
         formData.append('date_to', dateTo);
@@ -1154,6 +1251,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (newEventAllDay) {
         newEventAllDay.addEventListener('change', () => {
             toggleNewEventTimeFields(!newEventAllDay.checked);
+        });
+    }
+
+    // Toggle between single and multi employer selection in the new event modal
+    const newEventMultiEmployer = document.getElementById('newEventMultiEmployer');
+    if (newEventMultiEmployer) {
+        newEventMultiEmployer.addEventListener('change', () => {
+            const isMulti = newEventMultiEmployer.checked;
+            document.getElementById('newEventEmployerSingleField').style.display = isMulti ? 'none' : '';
+            document.getElementById('newEventEmployerMultiField').style.display  = isMulti ? '' : 'none';
         });
     }
 

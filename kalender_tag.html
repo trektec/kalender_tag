@@ -36,6 +36,7 @@
             </div>
             <div class="edit-modal-body">
                 <input type="hidden" id="editEventId">
+                <input type="hidden" id="editEventSingleEvent" value="0">
                 <div class="edit-modal-field">
                     <label for="editEventDate">Datum</label>
                     <input type="date" id="editEventDate">
@@ -70,6 +71,14 @@
                         <input type="time" id="editEventEndTime">
                     </div>
                 </div>
+                <div id="editEventEmployerSingleField" class="edit-modal-field">
+                    <label for="editEventEmployer">Mitarbeiter</label>
+                    <select id="editEventEmployer"></select>
+                </div>
+                <div id="editEventEmployerMultiField" class="edit-modal-field" style="display:none;">
+                    <label for="editEventEmployerMulti">Mitarbeiter (mehrere wählbar)</label>
+                    <select id="editEventEmployerMulti" multiple size="4" style="width:100%;"></select>
+                </div>
             </div>
             <div class="edit-modal-footer">
                 <button id="editModalDelete" class="edit-modal-btn edit-modal-btn-delete">Löschen</button>
@@ -87,8 +96,16 @@
             </div>
             <div class="edit-modal-body">
                 <div class="edit-modal-field">
+                    <label for="newEventMultiEmployer">Mehrere Mitarbeiter</label>
+                    <input type="checkbox" id="newEventMultiEmployer">
+                </div>
+                <div id="newEventEmployerSingleField" class="edit-modal-field">
                     <label for="newEventEmployer">Mitarbeiter</label>
                     <select id="newEventEmployer"></select>
+                </div>
+                <div id="newEventEmployerMultiField" class="edit-modal-field" style="display:none;">
+                    <label for="newEventEmployerMulti">Mitarbeiter (mehrere wählbar)</label>
+                    <select id="newEventEmployerMulti" multiple size="4" style="width:100%;"></select>
                 </div>
                 <div class="edit-modal-field">
                     <label for="newEventDate">Datum</label>

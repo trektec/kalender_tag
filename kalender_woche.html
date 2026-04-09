@@ -87,8 +87,16 @@
             </div>
             <div class="edit-modal-body">
                 <div class="edit-modal-field">
+                    <label for="newEventMultiEmployer">Mehrere Mitarbeiter</label>
+                    <input type="checkbox" id="newEventMultiEmployer">
+                </div>
+                <div id="newEventEmployerSingleField" class="edit-modal-field">
                     <label for="newEventEmployer">Mitarbeiter</label>
                     <select id="newEventEmployer"></select>
+                </div>
+                <div id="newEventEmployerMultiField" class="edit-modal-field" style="display:none;">
+                    <label for="newEventEmployerMulti">Mitarbeiter (mehrere wählbar)</label>
+                    <select id="newEventEmployerMulti" multiple size="4" style="width:100%;"></select>
                 </div>
                 <div class="edit-modal-field">
                     <label for="newEventDate">Datum</label>

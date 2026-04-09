@@ -655,10 +655,15 @@ function addTooltipToEvent(eventBlock, event) {
             timeInfo = `${event.start_time} - ${event.end_time}`;
         }
         
-        // Include employee name in tooltip (look up from loaded employers list)
-        const employer = employers.find(e => String(e.id) === String(event.employer_id));
-        const employerName = employer ? employer.name : (event.employer_name || '');
-        const employeeInfo = employerName ? `\nMitarbeiter: ${employerName}` : '';
+        // Include employee name(s) in tooltip (look up from loaded employers list)
+        const ids = event.employer_ids || (event.employer_id != null ? [event.employer_id] : []);
+        const employerNames = ids
+            .map(id => {
+                const emp = employers.find(e => String(e.id) === String(id));
+                return emp ? emp.name : (event.employer_name || '');
+            })
+            .filter(Boolean);
+        const employeeInfo = employerNames.length > 0 ? `\nMitarbeiter: ${employerNames.join(', ')}` : '';
         const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}${employeeInfo}`;
         
         // Create tooltip
@@ -881,15 +886,27 @@ function openNewEventModal() {
     const modal = document.getElementById('newEventModal');
     if (!modal) return;
 
-    // Populate employer dropdown
-    const employerSelect = document.getElementById('newEventEmployer');
-    employerSelect.innerHTML = '';
+    // Populate both single and multi employer dropdowns
+    const employerSelect      = document.getElementById('newEventEmployer');
+    const employerMultiSelect = document.getElementById('newEventEmployerMulti');
+    employerSelect.innerHTML      = '';
+    employerMultiSelect.innerHTML = '';
     employers.forEach(emp => {
-        const option = document.createElement('option');
-        option.value = emp.id;
-        option.textContent = emp.name;
-        employerSelect.appendChild(option);
+        const opt1 = document.createElement('option');
+        opt1.value = emp.id;
+        opt1.textContent = emp.name;
+        employerSelect.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = emp.id;
+        opt2.textContent = emp.name;
+        employerMultiSelect.appendChild(opt2);
     });
+
+    // Reset multi-employer toggle
+    document.getElementById('newEventMultiEmployer').checked = false;
+    document.getElementById('newEventEmployerSingleField').style.display = '';
+    document.getElementById('newEventEmployerMultiField').style.display  = 'none';
 
     // Pre-fill date with the current week's Monday
     const monday = getMondayOfWeek(currentDate);
@@ -922,7 +939,26 @@ function toggleNewEventTimeFields(show) {
 
 // Create a new event via event_week_ajax.php
 async function createEventFromModal() {
-    const employerId = document.getElementById('newEventEmployer').value;
+    const isMultiEmployer = document.getElementById('newEventMultiEmployer').checked;
+    const singleEvent     = isMultiEmployer ? 1 : 0;
+
+    let employerIds = [];
+    if (isMultiEmployer) {
+        const multiSel = document.getElementById('newEventEmployerMulti');
+        employerIds = Array.from(multiSel.selectedOptions).map(o => o.value);
+        if (employerIds.length === 0) {
+            alert('Bitte mindestens einen Mitarbeiter auswählen.');
+            return;
+        }
+    } else {
+        const employerId = document.getElementById('newEventEmployer').value;
+        if (!employerId) {
+            alert('Bitte einen Mitarbeiter auswählen.');
+            return;
+        }
+        employerIds = [employerId];
+    }
+
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
     const category = document.getElementById('newEventCategory').value.trim();
@@ -953,7 +989,12 @@ async function createEventFromModal() {
     try {
         const formData = new FormData();
         formData.append('action', 'create');
-        formData.append('employer_id', employerId);
+        formData.append('single_event', String(singleEvent));
+        if (singleEvent === 0) {
+            formData.append('employer_id', employerIds[0]);
+        } else {
+            employerIds.forEach(eid => formData.append('employer_ids[]', eid));
+        }
         formData.append('user_id', String(userId));
         formData.append('date', date);
         formData.append('date_to', dateTo);
@@ -1055,6 +1096,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (newEventModal) {
         newEventModal.addEventListener('click', (e) => {
             if (e.target === newEventModal) closeNewEventModal();
+        });
+    }
+
+    // Toggle between single and multi employer selection in the new event modal
+    const newEventMultiEmployer = document.getElementById('newEventMultiEmployer');
+    if (newEventMultiEmployer) {
+        newEventMultiEmployer.addEventListener('change', () => {
+            const isMulti = newEventMultiEmployer.checked;
+            document.getElementById('newEventEmployerSingleField').style.display = isMulti ? 'none' : '';
+            document.getElementById('newEventEmployerMultiField').style.display  = isMulti ? '' : 'none';
         });
     }
 });

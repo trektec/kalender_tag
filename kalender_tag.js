@@ -176,7 +176,7 @@ async function loadSessions() {
 async function loadEvents() {
     try {
         const dateParam = formatDateForAPI(currentDate);
-        const response = await fetch(`event_iec_ajax.php?date=${dateParam}`);
+        const response = await fetch(`event_iec_ajax2.php?date=${dateParam}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -864,7 +864,7 @@ async function deleteEventFromModal() {
         formData.append('action', 'delete');
         formData.append('event_id', id);
 
-        const response = await fetch('event_iec_ajax.php', {
+        const response = await fetch('event_iec_ajax2.php', {
             method: 'POST',
             body: formData
         });
@@ -939,7 +939,7 @@ async function saveEventFromModal() {
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 
-        const response = await fetch('event_iec_ajax.php', {
+        const response = await fetch('event_iec_ajax2.php', {
             method: 'POST',
             body: formData
         });
@@ -1035,7 +1035,7 @@ function toggleNewEventTimeFields(show) {
     if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
-// Create a new event via event_iec_ajax.php
+// Create a new event via event_iec_ajax2.php
 async function createEventFromModal() {
     const employerId = document.getElementById('newEventEmployer').value;
     const date = document.getElementById('newEventDate').value;
@@ -1079,7 +1079,7 @@ async function createEventFromModal() {
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 
-        const response = await fetch('event_iec_ajax.php', {
+        const response = await fetch('event_iec_ajax2.php', {
             method: 'POST',
             body: formData
         });

@@ -21,6 +21,7 @@ define('DB_PORT', 3306);
 //     employer_id  INT UNSIGNED    NOT NULL,
 //     user_id      INT UNSIGNED    NOT NULL,
 //     date         DATE            NOT NULL,
+//     date_to      DATE            NULL DEFAULT NULL,
 //     start_time   TIME            NULL,
 //     end_time     TIME            NULL,
 //     category     VARCHAR(100)    NOT NULL DEFAULT '',
@@ -34,6 +35,9 @@ define('DB_PORT', 3306);
 //     INDEX idx_date (date),
 //     INDEX idx_employer (employer_id)
 // ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+//
+// To add date_to to an existing table:
+//   ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
 // ============================================================
 
 // ============================================================
@@ -55,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $isAllDay   = isset($_POST['is_all_day'])  ? (bool)$_POST['is_all_day'] : false;
         $startTime  = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
         $endTime    = isset($_POST['end_time'])    ? trim($_POST['end_time'])   : '';
+        $dateTo     = isset($_POST['date_to'])     ? trim($_POST['date_to'])    : '';
 
         if (filter_var($employerId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
             http_response_code(400);
@@ -95,6 +100,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime   = null;
         }
 
+        // Validate and normalize date_to: must be >= date; defaults to date if empty
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+            $dateTo = $date;
+        } else {
+            $dtTo = DateTime::createFromFormat('Y-m-d', $dateTo);
+            if (!$dtTo || $dtTo->format('Y-m-d') !== $dateTo || $dateTo < $date) {
+                $dateTo = $date;
+            }
+        }
+
         $employerId = (int)$employerId;
         $userId     = filter_var($userId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
                       ? (int)$userId : 1;
@@ -110,15 +125,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $conn->prepare(
             'INSERT INTO events
-                 (employer_id, user_id, date, start_time, end_time,
+                 (employer_id, user_id, date, date_to, start_time, end_time,
                   category, color, is_all_day, title)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->bind_param(
-            'iisssssis',
+            'iissssssis',
             $employerId,
             $userId,
             $date,
+            $dateTo,
             $startTime,
             $endTime,
             $category,
@@ -136,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'employer_id' => $employerId,
             'user_id'     => $userId,
             'date'        => $date,
+            'date_to'     => $dateTo,
             'start_time'  => $startTime ?? '',
             'end_time'    => $endTime   ?? '',
             'category'    => $category,
@@ -160,6 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $isAllDay  = isset($_POST['is_all_day'])  ? (bool)$_POST['is_all_day'] : false;
         $startTime = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
         $endTime   = isset($_POST['end_time'])    ? trim($_POST['end_time'])   : '';
+        $dateTo    = isset($_POST['date_to'])     ? trim($_POST['date_to'])    : '';
 
         if (filter_var($eventId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
             http_response_code(400);
@@ -200,6 +218,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime   = null;
         }
 
+        // Validate and normalize date_to: must be >= date; defaults to date if empty
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+            $dateTo = $date;
+        } else {
+            $dtTo = DateTime::createFromFormat('Y-m-d', $dateTo);
+            if (!$dtTo || $dtTo->format('Y-m-d') !== $dateTo || $dateTo < $date) {
+                $dateTo = $date;
+            }
+        }
+
         $eventId     = (int)$eventId;
         $isAllDayInt = $isAllDay ? 1 : 0;
 
@@ -214,6 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $conn->prepare(
             'UPDATE events
              SET    date       = ?,
+                    date_to    = ?,
                     start_time = ?,
                     end_time   = ?,
                     category   = ?,
@@ -223,8 +252,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              WHERE  id = ? AND deleted = 0'
         );
         $stmt->bind_param(
-            'sssssisi',
+            'sssssisis',
             $date,
+            $dateTo,
             $startTime,
             $endTime,
             $category,
@@ -303,15 +333,16 @@ $conn->set_charset('utf8mb4');
 
 $stmt = $conn->prepare(
     'SELECT id, employer_id, user_id,
-            DATE_FORMAT(date, \'%Y-%m-%d\') AS date,
+            DATE_FORMAT(date,    \'%Y-%m-%d\') AS date,
+            DATE_FORMAT(date_to, \'%Y-%m-%d\') AS date_to,
             IFNULL(TIME_FORMAT(start_time, \'%H:%i\'), \'\') AS start_time,
             IFNULL(TIME_FORMAT(end_time,   \'%H:%i\'), \'\') AS end_time,
             category, color, is_all_day, title
      FROM   events
-     WHERE  date = ? AND deleted = 0
+     WHERE  date <= ? AND COALESCE(date_to, date) >= ? AND deleted = 0
      ORDER  BY is_all_day DESC, start_time ASC'
 );
-$stmt->bind_param('s', $requestedDate);
+$stmt->bind_param('ss', $requestedDate, $requestedDate);
 $stmt->execute();
 
 $result = $stmt->get_result();
@@ -322,6 +353,8 @@ while ($row = $result->fetch_assoc()) {
     $row['employer_id'] = (int)$row['employer_id'];
     $row['user_id']     = (int)$row['user_id'];
     $row['is_all_day']  = (bool)$row['is_all_day'];
+    // Normalize date_to: fall back to date if not set
+    $row['date_to']     = $row['date_to'] ?? $row['date'];
     $events[]           = $row;
 }
 

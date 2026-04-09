@@ -328,7 +328,7 @@ function dbUpdateEvent(int $id, array $data): bool
     $stmt->execute();
 
     // Prüfen, ob wirklich ein Datensatz verändert wurde
-    $changed = $stmt->affected_rows >= 0; // >= 0 weil affected_rows = 0 wenn Werte gleich
+    $changed = $stmt->affected_rows > 0;
     $stmt->close();
 
     // event_employers-Einträge aktualisieren:

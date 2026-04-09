@@ -1027,8 +1027,11 @@ async function saveEventFromModal() {
             // Event no longer covers the current date – remove from view
             events.splice(eventIndex, 1);
         } else {
-            const newEmployerId = singleEvent === 0 ? (parseInt(employerIds[0], 10) || null) : null;
-            const newEmployerIds = employerIds.map(Number);
+            const newEmployerId  = singleEvent === 0 ? (Number(employerIds[0]) || null) : null;
+            const newEmployerIds = employerIds.map(id => {
+                const n = Number(id);
+                return Number.isFinite(n) && n > 0 ? n : null;
+            }).filter(n => n !== null);
             events[eventIndex] = {
                 ...events[eventIndex],
                 date,

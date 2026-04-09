@@ -241,9 +241,10 @@ function calculateAllDayHeights(weekDates) {
     // Group events by day
     weekDates.forEach((date, index) => {
         const dateStr = formatDateForAPI(date);
-        const dayAllDayEvents = events.filter(
-            e => e.date === dateStr && e.is_all_day
-        );
+        const dayAllDayEvents = events.filter(e => {
+            const eventEnd = e.date_to || e.date;
+            return e.date <= dateStr && eventEnd >= dateStr && e.is_all_day;
+        });
         const count = dayAllDayEvents.length;
         allDayHeights[index] = count;
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
@@ -450,7 +451,10 @@ function renderEvents() {
     
     weekDates.forEach((date, dayIndex) => {
         const dateStr = formatDateForAPI(date);
-        const dayEvents = events.filter(e => e.date === dateStr);
+        const dayEvents = events.filter(e => {
+            const eventEnd = e.date_to || e.date;
+            return e.date <= dateStr && eventEnd >= dateStr;
+        });
         
         const allDayEvents = dayEvents.filter(e => e.is_all_day);
         const timedEvents = dayEvents.filter(e => !e.is_all_day);
@@ -641,9 +645,15 @@ function addTooltipToEvent(eventBlock, event) {
     let tooltip = null;
     
     eventBlock.addEventListener('mouseenter', () => {
-        const timeInfo = event.is_all_day 
-            ? 'Ganztägig' 
-            : `${event.start_time} - ${event.end_time}`;
+        let timeInfo;
+        if (event.is_all_day) {
+            const dateTo = event.date_to || event.date;
+            timeInfo = dateTo !== event.date
+                ? `Ganztägig (${event.date} – ${dateTo})`
+                : 'Ganztägig';
+        } else {
+            timeInfo = `${event.start_time} - ${event.end_time}`;
+        }
         
         // Include employee name in tooltip (look up from loaded employers list)
         const employer = employers.find(e => String(e.id) === String(event.employer_id));
@@ -695,6 +705,7 @@ function openEditModal(event) {
     // Populate fields
     document.getElementById('editEventId').value = event.id;
     document.getElementById('editEventDate').value = event.date || '';
+    document.getElementById('editEventDateTo').value = event.date_to || event.date || '';
     document.getElementById('editEventTitle').value = event.title || '';
     document.getElementById('editEventCategory').value = event.category || '';
     document.getElementById('editEventColor').value = event.color || '#4a90e2';
@@ -716,6 +727,8 @@ function closeEditModal() {
 function toggleTimeFields(show) {
     const timeFields = document.getElementById('editEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
+    const dateToField = document.getElementById('editEventDateToField');
+    if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
 // Delete the event currently shown in the modal
@@ -773,6 +786,7 @@ async function saveEventFromModal() {
     const category = document.getElementById('editEventCategory').value.trim();
     const color = document.getElementById('editEventColor').value;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
+    const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
 
@@ -796,6 +810,7 @@ async function saveEventFromModal() {
         formData.append('action', 'edit');
         formData.append('event_id', id);
         formData.append('date', date);
+        formData.append('date_to', dateTo);
         formData.append('title', title);
         formData.append('category', category);
         formData.append('color', color);
@@ -833,13 +848,17 @@ async function saveEventFromModal() {
 
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {
-        if (date < mondayStr || date > sundayStr) {
+        const effectiveDateTo = dateTo || date;
+        // Event is still in the current week if its date range overlaps the week
+        const stillInWeek = date <= sundayStr && effectiveDateTo >= mondayStr;
+        if (!stillInWeek) {
             // Event moved outside current week – remove from view
             events.splice(eventIndex, 1);
         } else {
             events[eventIndex] = {
                 ...events[eventIndex],
                 date,
+                date_to: dateTo,
                 title,
                 category,
                 color,
@@ -875,6 +894,7 @@ function openNewEventModal() {
     // Pre-fill date with the current week's Monday
     const monday = getMondayOfWeek(currentDate);
     document.getElementById('newEventDate').value = formatDateForAPI(monday);
+    document.getElementById('newEventDateTo').value = formatDateForAPI(monday);
     document.getElementById('newEventTitle').value = '';
     document.getElementById('newEventCategory').value = '';
     document.getElementById('newEventColor').value = '#4a90e2';
@@ -896,6 +916,8 @@ function closeNewEventModal() {
 function toggleNewEventTimeFields(show) {
     const timeFields = document.getElementById('newEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
+    const dateToField = document.getElementById('newEventDateToField');
+    if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
 // Create a new event via event_week_ajax.php
@@ -906,6 +928,7 @@ async function createEventFromModal() {
     const category = document.getElementById('newEventCategory').value.trim();
     const color = document.getElementById('newEventColor').value;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
+    const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
 
@@ -933,6 +956,7 @@ async function createEventFromModal() {
         formData.append('employer_id', employerId);
         formData.append('user_id', String(userId));
         formData.append('date', date);
+        formData.append('date_to', dateTo);
         formData.append('title', title);
         formData.append('category', category);
         formData.append('color', color);
@@ -956,15 +980,16 @@ async function createEventFromModal() {
             return;
         }
 
-        // Add new event to local array if it falls within the current week
+        // Add new event to local array if it overlaps the current week
         if (result.event) {
             const monday = getMondayOfWeek(currentDate);
             const sunday = new Date(monday);
             sunday.setDate(monday.getDate() + 6);
             const mondayStr = formatDateForAPI(monday);
             const sundayStr = formatDateForAPI(sunday);
+            const effectiveDateTo = result.event.date_to || result.event.date;
 
-            if (result.event.date >= mondayStr && result.event.date <= sundayStr) {
+            if (result.event.date <= sundayStr && effectiveDateTo >= mondayStr) {
                 events.push(result.event);
                 document.querySelectorAll('.event-block').forEach(el => el.remove());
                 renderEvents();

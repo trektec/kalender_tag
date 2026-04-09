@@ -769,9 +769,15 @@ function addTooltipToEvent(eventBlock, event) {
     let tooltip = null;
     
     eventBlock.addEventListener('mouseenter', () => {
-        const timeInfo = event.is_all_day 
-            ? 'Ganztägig' 
-            : `${event.start_time} - ${event.end_time}`;
+        let timeInfo;
+        if (event.is_all_day) {
+            const dateTo = event.date_to || event.date;
+            timeInfo = dateTo !== event.date
+                ? `Ganztägig (${event.date} – ${dateTo})`
+                : 'Ganztägig';
+        } else {
+            timeInfo = `${event.start_time} - ${event.end_time}`;
+        }
         
         const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}`;
         
@@ -819,6 +825,7 @@ function openEditModal(event) {
     // Populate fields
     document.getElementById('editEventId').value = event.id;
     document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
+    document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
     document.getElementById('editEventCategory').value = event.category || '';
     document.getElementById('editEventColor').value = event.color || '#4a90e2';
@@ -840,6 +847,8 @@ function closeEditModal() {
 function toggleTimeFields(show) {
     const timeFields = document.getElementById('editEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
+    const dateToField = document.getElementById('editEventDateToField');
+    if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
 // Delete the event currently shown in the modal
@@ -897,6 +906,7 @@ async function saveEventFromModal() {
     const category = document.getElementById('editEventCategory').value.trim();
     const color = document.getElementById('editEventColor').value;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
+    const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
 
@@ -921,6 +931,7 @@ async function saveEventFromModal() {
         formData.append('action', 'edit');
         formData.append('event_id', id);
         formData.append('date', date);
+        formData.append('date_to', dateTo);
         formData.append('title', title);
         formData.append('category', category);
         formData.append('color', color);
@@ -954,13 +965,16 @@ async function saveEventFromModal() {
     // Find and update the event in the local events array
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {
-        if (date !== currentDateStr) {
-            // Event moved to a different date – remove from current view
+        const effectiveDateTo = dateTo || date;
+        const stillVisible = date <= currentDateStr && effectiveDateTo >= currentDateStr;
+        if (!stillVisible) {
+            // Event no longer covers the current date – remove from view
             events.splice(eventIndex, 1);
         } else {
             events[eventIndex] = {
                 ...events[eventIndex],
                 date,
+                date_to: dateTo,
                 title,
                 category,
                 color,
@@ -995,6 +1009,7 @@ function openNewEventModal() {
 
     // Reset fields
     document.getElementById('newEventDate').value = formatDateForAPI(currentDate);
+    document.getElementById('newEventDateTo').value = formatDateForAPI(currentDate);
     document.getElementById('newEventTitle').value = '';
     document.getElementById('newEventCategory').value = '';
     document.getElementById('newEventColor').value = '#4a90e2';
@@ -1016,6 +1031,8 @@ function closeNewEventModal() {
 function toggleNewEventTimeFields(show) {
     const timeFields = document.getElementById('newEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
+    const dateToField = document.getElementById('newEventDateToField');
+    if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
 // Create a new event via event_iec_ajax.php
@@ -1026,6 +1043,7 @@ async function createEventFromModal() {
     const category = document.getElementById('newEventCategory').value.trim();
     const color = document.getElementById('newEventColor').value;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
+    const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
 
@@ -1053,6 +1071,7 @@ async function createEventFromModal() {
         formData.append('employer_id', employerId);
         formData.append('user_id', String(userId));
         formData.append('date', date);
+        formData.append('date_to', dateTo);
         formData.append('title', title);
         formData.append('category', category);
         formData.append('color', color);
@@ -1076,13 +1095,16 @@ async function createEventFromModal() {
             return;
         }
 
-        // Add the new event to the local array only if it belongs to the current date
+        // Add the new event to the local array only if it covers the current date
         const currentDateStr = formatDateForAPI(currentDate);
-        if (result.event && result.event.date === currentDateStr) {
-            events.push(result.event);
-            // Re-render events
-            document.querySelectorAll('.event-block').forEach(el => el.remove());
-            renderEvents();
+        if (result.event) {
+            const effectiveDateTo = result.event.date_to || result.event.date;
+            if (result.event.date <= currentDateStr && effectiveDateTo >= currentDateStr) {
+                events.push(result.event);
+                // Re-render events
+                document.querySelectorAll('.event-block').forEach(el => el.remove());
+                renderEvents();
+            }
         }
 
     } catch (error) {

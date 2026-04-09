@@ -128,6 +128,9 @@ function dbGetEvents(string $date): array
 {
     $conn = getDbConnection();
 
+    // Increase GROUP_CONCAT limit to avoid truncation when many employers are assigned to an event
+    $conn->query('SET SESSION group_concat_max_len = 65536');
+
     // Alle aktiven Termine laden, die das gewünschte Datum abdecken
     // (date <= $date AND date_to >= $date); Ganztags-Termine werden zuerst angezeigt
     $stmt = $conn->prepare(

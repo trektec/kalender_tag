@@ -359,6 +359,8 @@ if ($conn->connect_error) {
     exit;
 }
 $conn->set_charset('utf8mb4');
+// Increase GROUP_CONCAT limit to avoid truncation when many employers are assigned to an event
+$conn->query('SET SESSION group_concat_max_len = 65536');
 
 $stmt = $conn->prepare(
     'SELECT e.id, e.employer_id, e.user_id,

@@ -224,20 +224,24 @@ function getHeaderHeight() {
     return EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
 }
 
+// Helper: returns an array of employer ID strings for an event,
+// supporting both multi-employer (employer_ids array) and legacy single employer_id.
+function getEmployerIds(event) {
+    return Array.isArray(event.employer_ids)
+        ? event.employer_ids.map(String)
+        : [String(event.employer_id)];
+}
+
 // Calculate the height needed for all-day section for each employer
 function calculateAllDayHeights() {
     const allDayHeights = {};
     let maxAllDayEvents = 0; // Start with 0
-    
+
     // Group events by employer
     employers.forEach(employer => {
-        const employerAllDayEvents = events.filter(e => {
-            // Support employer_ids array (multi-employer) or fall back to single employer_id
-            const ids = Array.isArray(e.employer_ids)
-                ? e.employer_ids.map(String)
-                : [String(e.employer_id)];
-            return ids.includes(String(employer.id)) && e.is_all_day;
-        });
+        const employerAllDayEvents = events.filter(e =>
+            getEmployerIds(e).includes(String(employer.id)) && e.is_all_day
+        );
         const count = employerAllDayEvents.length;
         allDayHeights[employer.id] = count;
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
@@ -570,9 +574,7 @@ function renderEvents() {
     
     events.forEach(event => {
         // Support employer_ids array (multi-employer) or fall back to single employer_id
-        const ids = Array.isArray(event.employer_ids)
-            ? event.employer_ids.map(String)
-            : [String(event.employer_id)];
+        const ids = getEmployerIds(event);
 
         ids.forEach(empId => {
             if (!eventsByEmployer[empId]) {

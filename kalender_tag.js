@@ -1079,49 +1079,62 @@ async function createEventFromModal() {
 
     const currentDateStr = formatDateForAPI(currentDate);
 
-    try {
-        for (const employerId of selectedEmployerIds) {
-            const formData = new FormData();
-            formData.append('action', 'create');
-            formData.append('employer_id', employerId);
-            formData.append('user_id', String(userId));
-            formData.append('date', date);
-            formData.append('date_to', dateTo);
-            formData.append('title', title);
-            formData.append('category', category);
-            formData.append('color', color);
-            formData.append('is_all_day', isAllDay ? '1' : '0');
-            formData.append('start_time', isAllDay ? '' : startTime);
-            formData.append('end_time', isAllDay ? '' : endTime);
+    const createForEmployer = async (employerId) => {
+        const formData = new FormData();
+        formData.append('action', 'create');
+        formData.append('employer_id', employerId);
+        formData.append('user_id', String(userId));
+        formData.append('date', date);
+        formData.append('date_to', dateTo);
+        formData.append('title', title);
+        formData.append('category', category);
+        formData.append('color', color);
+        formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('start_time', isAllDay ? '' : startTime);
+        formData.append('end_time', isAllDay ? '' : endTime);
 
-            const response = await fetch('event_iec_ajax2.php', {
-                method: 'POST',
-                body: formData
-            });
+        const response = await fetch('event_iec_ajax2.php', {
+            method: 'POST',
+            body: formData
+        });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-
-            if (!result.success) {
-                alert(result.message || 'Fehler beim Erstellen des Termins.');
-                return;
-            }
-
-            // Add the new event to the local array only if it covers the current date
-            if (result.event) {
-                const effectiveDateTo = result.event.date_to || result.event.date;
-                if (result.event.date <= currentDateStr && effectiveDateTo >= currentDateStr) {
-                    events.push(result.event);
-                }
-            }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        // Re-render events once after all have been created
+        return response.json();
+    };
+
+    try {
+        const results = await Promise.allSettled(
+            selectedEmployerIds.map(id => createForEmployer(id))
+        );
+
+        const errors = [];
+        results.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+                const data = result.value;
+                if (!data.success) {
+                    errors.push(data.message || 'Fehler beim Erstellen des Termins.');
+                } else if (data.event) {
+                    const effectiveDateTo = data.event.date_to || data.event.date;
+                    if (data.event.date <= currentDateStr && effectiveDateTo >= currentDateStr) {
+                        events.push(data.event);
+                    }
+                }
+            } else {
+                errors.push(`Mitarbeiter ${selectedEmployerIds[index]}: ${result.reason.message}`);
+            }
+        });
+
+        // Re-render events with all successfully created entries
         document.querySelectorAll('.event-block').forEach(el => el.remove());
         renderEvents();
+
+        if (errors.length > 0) {
+            alert('Einige Termine konnten nicht erstellt werden:\n' + errors.join('\n'));
+            return;
+        }
 
     } catch (error) {
         console.error('Fehler beim Erstellen des Termins:', error);

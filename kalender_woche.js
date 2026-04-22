@@ -31,6 +31,7 @@ const TODAY_COLOR = '#2ecc71';
 // State
 let employers = [];
 let events = [];
+let categories = [];
 let currentAllDayHeights = null; // Cache for all-day heights
 let currentDate = new Date(); // Current selected date (we'll calculate Monday of this week)
 
@@ -90,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
     updateWeekDisplay();
     await loadEmployers();
+    await loadCategories();
     await loadEvents();
     renderCalendar();
     renderEvents();
@@ -144,11 +146,50 @@ function updateWeekDisplay() {
 
 // Reload calendar with current week
 async function reloadCalendar() {
+    await loadCategories();
     await loadEvents();
     renderCalendar();
     renderEvents();
     createTimelineElement(); // Recreate timeline element after calendar is re-rendered
     updateTimeline();
+}
+
+// Load categories from server
+async function loadCategories() {
+    try {
+        const response = await fetch('kategorie_ajax.php');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        categories = Array.isArray(data) ? data : [];
+    } catch (error) {
+        console.error('Fehler beim Laden der Kategorien:', error);
+        categories = [];
+    }
+}
+
+function getCategoryById(katid) {
+    return categories.find(cat => String(cat.katid) === String(katid)) || null;
+}
+
+function populateCategorySelect(selectId, selectedKatid = null) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    select.innerHTML = '';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = String(cat.katid);
+        option.textContent = cat.katname;
+        select.appendChild(option);
+    });
+
+    if (selectedKatid !== null && selectedKatid !== undefined && selectedKatid !== '') {
+        select.value = String(selectedKatid);
+    } else if (select.options.length > 0) {
+        select.selectedIndex = 0;
+    }
 }
 
 // Format date for API calls (YYYY-MM-DD)
@@ -724,8 +765,7 @@ function openEditModal(event) {
     document.getElementById('editEventDate').value = event.date || '';
     document.getElementById('editEventDateTo').value = event.date_to || event.date || '';
     document.getElementById('editEventTitle').value = event.title || '';
-    document.getElementById('editEventCategory').value = event.category || '';
-    document.getElementById('editEventColor').value = event.color || '#4a90e2';
+    populateCategorySelect('editEventCategory', event.katid);
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
     document.getElementById('editEventStartTime').value = event.start_time || '';
     document.getElementById('editEventEndTime').value = event.end_time || '';
@@ -800,8 +840,7 @@ async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
     const date = document.getElementById('editEventDate').value;
     const title = document.getElementById('editEventTitle').value.trim();
-    const category = document.getElementById('editEventCategory').value.trim();
-    const color = document.getElementById('editEventColor').value;
+    const katid = document.getElementById('editEventCategory').value;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
@@ -817,6 +856,12 @@ async function saveEventFromModal() {
         return;
     }
 
+    const selectedCategory = getCategoryById(katid);
+    if (!selectedCategory) {
+        alert('Bitte eine gültige Kategorie auswählen.');
+        return;
+    }
+
     if (!isAllDay && (!startTime || !endTime)) {
         alert('Bitte Start- und Endzeit angeben.');
         return;
@@ -829,8 +874,7 @@ async function saveEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
-        formData.append('category', category);
-        formData.append('color', color);
+        formData.append('katid', String(selectedCategory.katid));
         formData.append('is_all_day', isAllDay ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
@@ -877,8 +921,9 @@ async function saveEventFromModal() {
                 date,
                 date_to: dateTo,
                 title,
-                category,
-                color,
+                katid: selectedCategory.katid,
+                category: selectedCategory.katname,
+                color: selectedCategory.katcolor,
                 is_all_day: isAllDay,
                 start_time: isAllDay ? '' : startTime,
                 end_time: isAllDay ? '' : endTime
@@ -913,8 +958,7 @@ function openNewEventModal() {
     document.getElementById('newEventDate').value = formatDateForAPI(monday);
     document.getElementById('newEventDateTo').value = formatDateForAPI(monday);
     document.getElementById('newEventTitle').value = '';
-    document.getElementById('newEventCategory').value = '';
-    document.getElementById('newEventColor').value = '#4a90e2';
+    populateCategorySelect('newEventCategory');
     document.getElementById('newEventIsAllDay').checked = false;
     document.getElementById('newEventStartTime').value = '';
     document.getElementById('newEventEndTime').value = '';
@@ -943,8 +987,7 @@ async function createEventFromModal() {
     const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
-    const category = document.getElementById('newEventCategory').value.trim();
-    const color = document.getElementById('newEventColor').value;
+    const katid = document.getElementById('newEventCategory').value;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
@@ -965,6 +1008,12 @@ async function createEventFromModal() {
         return;
     }
 
+    const selectedCategory = getCategoryById(katid);
+    if (!selectedCategory) {
+        alert('Bitte eine gültige Kategorie auswählen.');
+        return;
+    }
+
     if (!isAllDay && (!startTime || !endTime)) {
         alert('Bitte Start- und Endzeit angeben.');
         return;
@@ -981,8 +1030,7 @@ async function createEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
-        formData.append('category', category);
-        formData.append('color', color);
+        formData.append('katid', String(selectedCategory.katid));
         formData.append('is_all_day', isAllDay ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
@@ -1013,7 +1061,12 @@ async function createEventFromModal() {
             const effectiveDateTo = result.event.date_to || result.event.date;
 
             if (result.event.date <= sundayStr && effectiveDateTo >= mondayStr) {
-                events.push(result.event);
+                events.push({
+                    ...result.event,
+                    katid: selectedCategory.katid,
+                    category: selectedCategory.katname,
+                    color: selectedCategory.katcolor
+                });
                 document.querySelectorAll('.event-block').forEach(el => el.remove());
                 renderEvents();
             }

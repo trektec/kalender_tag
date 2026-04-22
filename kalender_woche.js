@@ -485,7 +485,11 @@ function renderAllDayEvents(dayIndex, allDayEvents) {
         eventBlock.style.backgroundColor = event.color;
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
-        eventBlock.textContent = event.title || event.category;
+        const allDayTitle = event.title || event.category;
+        const allDayNames = getEmployerNames(event);
+        eventBlock.innerHTML = allDayNames
+            ? `<span class="event-title-text">${allDayTitle}</span><span class="event-employers"> | ${allDayNames}</span>`
+            : `<span class="event-title-text">${allDayTitle}</span>`;
         
         // Add tooltip with employee info
         addTooltipToEvent(eventBlock, event);
@@ -620,9 +624,11 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
     
     // Add event content
     const timeStr = `${event.start_time}-${event.end_time}`;
+    const employerNames = getEmployerNames(event);
     eventBlock.innerHTML = `
         <div class="event-title">${event.title || event.category}</div>
         <div class="event-time">${timeStr}</div>
+        ${employerNames ? `<div class="event-employers">${employerNames}</div>` : ''}
     `;
     
     // Add tooltip with employee info
@@ -638,6 +644,18 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
     }
     
     dayColumn.appendChild(eventBlock);
+}
+
+// Return a comma-separated string of employer names for an event
+function getEmployerNames(event) {
+    if (Array.isArray(event.employer_ids) && event.employer_ids.length > 0) {
+        return event.employer_ids.map(id => {
+            const emp = employers.find(e => String(e.id) === String(id));
+            return emp ? emp.name : '';
+        }).filter(Boolean).join(', ');
+    }
+    const employer = employers.find(e => String(e.id) === String(event.employer_id));
+    return employer ? employer.name : (event.employer_name || '');
 }
 
 // Add tooltip to event block with employee info
@@ -656,16 +674,7 @@ function addTooltipToEvent(eventBlock, event) {
         }
         
         // Include employee name(s) in tooltip (look up from loaded employers list)
-        let employerNames;
-        if (Array.isArray(event.employer_ids) && event.employer_ids.length > 0) {
-            employerNames = event.employer_ids.map(id => {
-                const emp = employers.find(e => String(e.id) === String(id));
-                return emp ? emp.name : '';
-            }).filter(Boolean).join(', ');
-        } else {
-            const employer = employers.find(e => String(e.id) === String(event.employer_id));
-            employerNames = employer ? employer.name : (event.employer_name || '');
-        }
+        const employerNames = getEmployerNames(event);
         const employeeInfo = employerNames ? `\nMitarbeiter: ${employerNames}` : '';
         const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}${employeeInfo}`;
         

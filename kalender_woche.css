@@ -323,6 +323,15 @@ h1 {
     opacity: 0.9;
 }
 
+.event-employers {
+    font-size: 10px;
+    opacity: 0.85;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 2px;
+}
+
 .event-tooltip {
     position: absolute;
     background-color: rgba(0, 0, 0, 0.9);

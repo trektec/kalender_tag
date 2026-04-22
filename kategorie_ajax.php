@@ -1,14 +1,20 @@
 <?php
 header('Content-Type: application/json');
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'your_db_user');
-define('DB_PASS', 'your_db_password');
-define('DB_NAME', 'your_db_name');
-define('DB_PORT', 3306);
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_USER', getenv('DB_USER') ?: '');
+define('DB_PASS', getenv('DB_PASS') ?: '');
+define('DB_NAME', getenv('DB_NAME') ?: '');
+define('DB_PORT', (int)(getenv('DB_PORT') ?: 3306));
 
 function getDbConnection(): mysqli
 {
+    if (DB_USER === '' || DB_NAME === '') {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Datenbankkonfiguration unvollständig.']);
+        exit;
+    }
+
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
     if ($conn->connect_error) {
         http_response_code(500);

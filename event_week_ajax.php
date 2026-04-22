@@ -24,6 +24,7 @@ define('DB_PORT', 3306);
 //     date_to      DATE            NULL DEFAULT NULL,
 //     start_time   TIME            NULL,
 //     end_time     TIME            NULL,
+//     katid        TINYINT UNSIGNED NOT NULL DEFAULT 1,
 //     category     VARCHAR(100)    NOT NULL DEFAULT '',
 //     color        VARCHAR(7)      NOT NULL DEFAULT '#4a90e2',
 //     is_all_day   TINYINT(1)      NOT NULL DEFAULT 0,
@@ -46,6 +47,8 @@ define('DB_PORT', 3306);
 //
 // To add date_to to an existing table:
 //   ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
+// To add katid to an existing table:
+//   ALTER TABLE events ADD COLUMN katid TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER end_time;
 // ============================================================
 
 // ============================================================
@@ -78,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId     = isset($_POST['user_id'])     ? $_POST['user_id']     : '1';
         $date       = isset($_POST['date'])        ? trim($_POST['date'])  : '';
         $title      = isset($_POST['title'])       ? trim($_POST['title']) : '';
-        $category   = isset($_POST['category'])    ? trim($_POST['category']) : '';
+        $katid      = isset($_POST['katid'])       ? $_POST['katid'] : null;
         $color      = isset($_POST['color'])       ? trim($_POST['color']) : '#4a90e2';
         $isAllDay   = isset($_POST['is_all_day'])  ? (bool)$_POST['is_all_day'] : false;
         $startTime  = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
@@ -102,6 +105,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Titel darf nicht leer sein.']);
             exit;
         }
+
+        if (filter_var($katid, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 4]]) === false) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Ungültige Kategorie. Erlaubt sind nur 1 bis 4.']);
+            exit;
+        }
+        $katid = (int)$katid;
+        $categoryLabels = [1 => 'Intern', 2 => 'Extern', 3 => 'Krank', 4 => 'Urlaub'];
+        $category = $categoryLabels[$katid];
 
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
             $color = '#4a90e2';
@@ -141,19 +153,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->set_charset('utf8mb4');
 
         $stmt = $conn->prepare(
-            'INSERT INTO events
-                 (employer_id, user_id, date, date_to, start_time, end_time,
-                  category, color, is_all_day, title)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+             'INSERT INTO events
+                  (employer_id, user_id, date, date_to, start_time, end_time,
+                   katid, category, color, is_all_day, title)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->bind_param(
-            'iissssssis',
+            'iissssissis',
             $employerId,
             $userId,
             $date,
             $dateTo,
             $startTime,
             $endTime,
+            $katid,
             $category,
             $color,
             $isAllDayInt,
@@ -181,6 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'date_to'      => $dateTo,
             'start_time'   => $startTime ?? '',
             'end_time'     => $endTime   ?? '',
+            'katid'        => $katid,
             'category'     => $category,
             'color'        => $color,
             'is_all_day'   => $isAllDay,
@@ -198,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $eventId   = isset($_POST['event_id'])   ? $_POST['event_id']         : '';
         $date      = isset($_POST['date'])        ? trim($_POST['date'])       : '';
         $title     = isset($_POST['title'])       ? trim($_POST['title'])      : '';
-        $category  = isset($_POST['category'])    ? trim($_POST['category'])   : '';
+        $katid     = isset($_POST['katid'])       ? $_POST['katid'] : null;
         $color     = isset($_POST['color'])       ? trim($_POST['color'])      : '#4a90e2';
         $isAllDay  = isset($_POST['is_all_day'])  ? (bool)$_POST['is_all_day'] : false;
         $startTime = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
@@ -228,6 +242,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Titel darf nicht leer sein.']);
             exit;
         }
+
+        if (filter_var($katid, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 4]]) === false) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Ungültige Kategorie. Erlaubt sind nur 1 bis 4.']);
+            exit;
+        }
+        $katid = (int)$katid;
+        $categoryLabels = [1 => 'Intern', 2 => 'Extern', 3 => 'Krank', 4 => 'Urlaub'];
+        $category = $categoryLabels[$katid];
 
         if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
             $color = '#4a90e2';
@@ -271,18 +294,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     date_to    = ?,
                     start_time = ?,
                     end_time   = ?,
+                    katid      = ?,
                     category   = ?,
                     color      = ?,
                     is_all_day = ?,
                     title      = ?
-             WHERE  id = ? AND deleted = 0'
+              WHERE  id = ? AND deleted = 0'
         );
         $stmt->bind_param(
-            'ssssssisi',
+            'ssssissisi',
             $date,
             $dateTo,
             $startTime,
             $endTime,
+            $katid,
             $category,
             $color,
             $isAllDayInt,
@@ -368,6 +393,7 @@ $stmt = $conn->prepare(
             DATE_FORMAT(e.date_to, \'%Y-%m-%d\') AS date_to,
             IFNULL(TIME_FORMAT(e.start_time, \'%H:%i\'), \'\') AS start_time,
             IFNULL(TIME_FORMAT(e.end_time,   \'%H:%i\'), \'\') AS end_time,
+            COALESCE(e.katid, 1) AS katid,
             e.category, e.color, e.is_all_day, e.title,
             GROUP_CONCAT(DISTINCT ee.employer_id ORDER BY ee.employer_id) AS employer_ids_str
      FROM   events e
@@ -386,6 +412,7 @@ while ($row = $result->fetch_assoc()) {
     $row['id']          = (int)$row['id'];
     $row['employer_id'] = (int)$row['employer_id'];
     $row['user_id']     = (int)$row['user_id'];
+    $row['katid']       = (int)$row['katid'];
     $row['is_all_day']  = (bool)$row['is_all_day'];
     // Normalize date_to: fall back to date if not set
     $row['date_to']     = $row['date_to'] ?? $row['date'];

@@ -143,7 +143,8 @@ $events = [
         'date' => date('Y-m-d'),      // Datum des Termins
         'start_time' => '08:00',      // Startzeit (HH:MM), leer bei Ganztags-Events
         'end_time' => '09:30',        // Endzeit (HH:MM), leer bei Ganztags-Events
-        'category' => 'meeting',      // Kategorie (frei wählbar)
+        'katid' => 1,                 // Kategorie-ID: 1=Intern, 2=Extern, 3=Krank, 4=Urlaub
+        'category' => 'Intern',       // Kategoriename passend zu katid
         'color' => '#4a90e2',         // Farbe (Hex-Code)
         'is_all_day' => false,        // true für Ganztags-Events
         'title' => 'Team Meeting'     // Titel des Termins

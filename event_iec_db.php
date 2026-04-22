@@ -25,6 +25,7 @@
 //        date_to      DATE            NULL DEFAULT NULL,
 //        start_time   TIME            NULL,
 //        end_time     TIME            NULL,
+//        katid        TINYINT UNSIGNED NOT NULL DEFAULT 1,
 //        category     VARCHAR(100)    NOT NULL DEFAULT '',
 //        color        VARCHAR(7)      NOT NULL DEFAULT '#4a90e2',
 //        is_all_day   TINYINT(1)      NOT NULL DEFAULT 0,
@@ -47,6 +48,8 @@
 //
 //    To add date_to to an existing table:
 //      ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
+//    To add katid to an existing table:
+//      ALTER TABLE events ADD COLUMN katid TINYINT UNSIGNED NOT NULL DEFAULT 1 AFTER end_time;
 //
 // 2. ZUGANGSDATEN EINTRAGEN
 //    Passe die vier Konstanten DB_HOST, DB_USER, DB_PASS und
@@ -139,6 +142,7 @@ function dbGetEvents(string $date): array
                 DATE_FORMAT(e.date_to, \'%Y-%m-%d\') AS date_to,
                 IFNULL(TIME_FORMAT(e.start_time, \'%H:%i\'), \'\') AS start_time,
                 IFNULL(TIME_FORMAT(e.end_time,   \'%H:%i\'), \'\') AS end_time,
+                COALESCE(e.katid, 1) AS katid,
                 e.category, e.color, e.is_all_day, e.title,
                 GROUP_CONCAT(DISTINCT ee.employer_id ORDER BY ee.employer_id) AS employer_ids_str
          FROM   events e
@@ -159,6 +163,7 @@ function dbGetEvents(string $date): array
         $row['id']          = (int)$row['id'];
         $row['employer_id'] = (int)$row['employer_id'];
         $row['user_id']     = (int)$row['user_id'];
+        $row['katid']       = (int)$row['katid'];
         $row['is_all_day']  = (bool)$row['is_all_day'];
         // Normalize date_to: fall back to date if not set
         $row['date_to']     = $row['date_to'] ?? $row['date'];
@@ -187,7 +192,8 @@ function dbGetEvents(string $date): array
 //                        date_to      – Enddatum (Y-m-d, >= date; gleich date für eintägige Termine)
 //                        start_time   – Startzeit (HH:MM) oder ''
 //                        end_time     – Endzeit   (HH:MM) oder ''
-//                        category     – Kategorie (z. B. 'meeting')
+//                        katid        – Kategorie-ID (1=Intern, 2=Extern, 3=Krank, 4=Urlaub)
+//                        category     – Kategoriename
 //                        color        – Farbe als HEX-Code (z. B. '#4a90e2')
 //                        is_all_day   – true/false
 //                        title        – Bezeichnung des Termins
@@ -200,8 +206,8 @@ function dbCreateEvent(array $data): int
     $stmt = $conn->prepare(
         'INSERT INTO events
              (employer_id, user_id, date, date_to, start_time, end_time,
-              category, color, is_all_day, title)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+               katid, category, color, is_all_day, title)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
 
     // Bei Ganztags-Terminen werden Startzeit und Endzeit auf NULL gesetzt
@@ -211,16 +217,21 @@ function dbCreateEvent(array $data): int
     // Enddatum normalisieren: Fallback auf Startdatum, falls nicht angegeben
     $dateTo    = !empty($data['date_to']) && $data['date_to'] >= $data['date']
                  ? $data['date_to'] : $data['date'];
+    $katid     = isset($data['katid']) ? (int)$data['katid'] : 1;
+    if ($katid < 1 || $katid > 4) {
+        $katid = 1;
+    }
 
     // Parametertypen: i=int, s=string
     $stmt->bind_param(
-        'iissssssis',
+        'iissssissis',
         $data['employer_id'],
         $data['user_id'],
         $data['date'],
         $dateTo,
         $startTime,
         $endTime,
+        $katid,
         $data['category'],
         $data['color'],
         $isAllDay,
@@ -258,7 +269,7 @@ function dbCreateEvent(array $data): int
 // @param  int   $id    ID des zu ändernden Termins
 // @param  array $data  Zu aktualisierende Felder:
 //                        date, date_to, start_time, end_time,
-//                        category, color, is_all_day, title,
+//                        katid, category, color, is_all_day, title,
 //                        employer_ids (optional) – Array aller zugewiesenen Mitarbeiter-IDs
 // @return bool         true, wenn mindestens eine Zeile geändert wurde
 // ============================================================
@@ -273,6 +284,7 @@ function dbUpdateEvent(int $id, array $data): bool
                 date_to    = ?,
                 start_time = ?,
                 end_time   = ?,
+                katid      = ?,
                 category   = ?,
                 color      = ?,
                 is_all_day = ?,
@@ -287,13 +299,18 @@ function dbUpdateEvent(int $id, array $data): bool
     // Enddatum normalisieren: Fallback auf Startdatum, falls nicht angegeben
     $dateTo    = !empty($data['date_to']) && $data['date_to'] >= $data['date']
                  ? $data['date_to'] : $data['date'];
+    $katid     = isset($data['katid']) ? (int)$data['katid'] : 1;
+    if ($katid < 1 || $katid > 4) {
+        $katid = 1;
+    }
 
     $stmt->bind_param(
-        'ssssssisi',
+        'ssssissisi',
         $data['date'],
         $dateTo,
         $startTime,
         $endTime,
+        $katid,
         $data['category'],
         $data['color'],
         $isAllDay,

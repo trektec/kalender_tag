@@ -22,6 +22,22 @@ let events = [];
 let currentAllDayHeights = null; // Cache for all-day heights
 let currentDate = new Date(); // Current selected date
 
+const CATEGORY_LABELS_BY_ID = {
+    1: 'Intern',
+    2: 'Extern',
+    3: 'Krank',
+    4: 'Urlaub'
+};
+
+function normalizeKatid(value) {
+    const katid = Number.parseInt(value, 10);
+    return Number.isInteger(katid) && katid >= 1 && katid <= 4 ? katid : 1;
+}
+
+function getCategoryLabel(katid) {
+    return CATEGORY_LABELS_BY_ID[normalizeKatid(katid)];
+}
+
 // Helper function to validate hex color format
 function isValidHexColor(color) {
     return /^#[0-9A-Fa-f]{6}$/.test(color);
@@ -183,7 +199,16 @@ async function loadEvents() {
         }
         
         const data = await response.json();
-        events = Array.isArray(data) ? data : [];
+        events = Array.isArray(data)
+            ? data.map(event => {
+                const katid = normalizeKatid(event.katid);
+                return {
+                    ...event,
+                    katid,
+                    category: event.category || getCategoryLabel(katid)
+                };
+            })
+            : [];
         
     } catch (error) {
         console.error('Fehler beim Laden der Events:', error);
@@ -839,7 +864,8 @@ function openEditModal(event) {
     document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
-    document.getElementById('editEventCategory').value = event.category || '';
+    const editKatid = normalizeKatid(event.katid);
+    document.getElementById('editEventCategory').value = String(editKatid);
     document.getElementById('editEventColor').value = event.color || '#4a90e2';
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
     document.getElementById('editEventStartTime').value = event.start_time || '';
@@ -915,7 +941,8 @@ async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
     const date = document.getElementById('editEventDate').value;
     const title = document.getElementById('editEventTitle').value.trim();
-    const category = document.getElementById('editEventCategory').value.trim();
+    const katid = normalizeKatid(document.getElementById('editEventCategory').value);
+    const category = getCategoryLabel(katid);
     const color = document.getElementById('editEventColor').value;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
@@ -945,6 +972,7 @@ async function saveEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
+        formData.append('katid', String(katid));
         formData.append('category', category);
         formData.append('color', color);
         formData.append('is_all_day', isAllDay ? '1' : '0');
@@ -988,6 +1016,7 @@ async function saveEventFromModal() {
                 date,
                 date_to: dateTo,
                 title,
+                katid,
                 category,
                 color,
                 is_all_day: isAllDay,
@@ -1023,7 +1052,7 @@ function openNewEventModal() {
     document.getElementById('newEventDate').value = formatDateForAPI(currentDate);
     document.getElementById('newEventDateTo').value = formatDateForAPI(currentDate);
     document.getElementById('newEventTitle').value = '';
-    document.getElementById('newEventCategory').value = '';
+    document.getElementById('newEventCategory').value = '1';
     document.getElementById('newEventColor').value = '#4a90e2';
     document.getElementById('newEventIsAllDay').checked = false;
     document.getElementById('newEventStartTime').value = '';
@@ -1053,7 +1082,8 @@ async function createEventFromModal() {
     const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
-    const category = document.getElementById('newEventCategory').value.trim();
+    const katid = normalizeKatid(document.getElementById('newEventCategory').value);
+    const category = getCategoryLabel(katid);
     const color = document.getElementById('newEventColor').value;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
@@ -1091,6 +1121,7 @@ async function createEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
+        formData.append('katid', String(katid));
         formData.append('category', category);
         formData.append('color', color);
         formData.append('is_all_day', isAllDay ? '1' : '0');

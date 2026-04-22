@@ -217,9 +217,9 @@ function dbCreateEvent(array $data): int
     // Enddatum normalisieren: Fallback auf Startdatum, falls nicht angegeben
     $dateTo    = !empty($data['date_to']) && $data['date_to'] >= $data['date']
                  ? $data['date_to'] : $data['date'];
-    $katid     = isset($data['katid']) ? (int)$data['katid'] : 1;
+    $katid = isset($data['katid']) ? (int)$data['katid'] : 0;
     if ($katid < 1 || $katid > 4) {
-        $katid = 1;
+        throw new InvalidArgumentException('Ungültige Kategorie. Erlaubt sind nur 1 bis 4.');
     }
 
     // Parametertypen: i=int, s=string
@@ -299,9 +299,9 @@ function dbUpdateEvent(int $id, array $data): bool
     // Enddatum normalisieren: Fallback auf Startdatum, falls nicht angegeben
     $dateTo    = !empty($data['date_to']) && $data['date_to'] >= $data['date']
                  ? $data['date_to'] : $data['date'];
-    $katid     = isset($data['katid']) ? (int)$data['katid'] : 1;
+    $katid = isset($data['katid']) ? (int)$data['katid'] : 0;
     if ($katid < 1 || $katid > 4) {
-        $katid = 1;
+        throw new InvalidArgumentException('Ungültige Kategorie. Erlaubt sind nur 1 bis 4.');
     }
 
     $stmt->bind_param(

@@ -894,9 +894,6 @@ function openEditModal(event) {
     document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
     populateCategorySelect('editEventCategory', event.katid || '');
-    if (!event.katid) {
-        document.getElementById('editEventCategory').value = '';
-    }
     document.getElementById('editEventColor').value = event.color || '#4a90e2';
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
     document.getElementById('editEventStartTime').value = event.start_time || '';

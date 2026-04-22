@@ -1,13 +1,19 @@
 <?php
 header('Content-Type: application/json');
 
-define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-define('DB_USER', getenv('DB_USER') ?: 'your_db_user');
-define('DB_PASS', getenv('DB_PASS') ?: 'your_db_password');
-define('DB_NAME', getenv('DB_NAME') ?: 'your_db_name');
-define('DB_PORT', (int)(getenv('DB_PORT') ?: 3306));
+$dbHost = getenv('DB_HOST') ?: 'localhost';
+$dbUser = getenv('DB_USER');
+$dbPass = getenv('DB_PASS');
+$dbName = getenv('DB_NAME');
+$dbPort = (int)(getenv('DB_PORT') ?: 3306);
 
-$conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+if ($dbUser === false || $dbPass === false || $dbName === false) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Datenbank-Konfiguration fehlt (DB_USER/DB_PASS/DB_NAME).']);
+    exit;
+}
+
+$conn = new mysqli($dbHost, $dbUser, $dbPass, $dbName, $dbPort);
 if ($conn->connect_error) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Datenbankverbindung fehlgeschlagen.']);

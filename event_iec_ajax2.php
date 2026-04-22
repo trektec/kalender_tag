@@ -194,7 +194,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $isAllDayInt,
             $title
         );
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            $stmt->close();
+            $conn->close();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Termin konnte nicht erstellt werden.']);
+            exit;
+        }
         $newId = (int)$conn->insert_id;
         $stmt->close();
 
@@ -303,6 +309,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $conn->set_charset('utf8mb4');
 
+        $stmtExists = $conn->prepare('SELECT id FROM events WHERE id = ? AND deleted = 0 LIMIT 1');
+        $stmtExists->bind_param('i', $eventId);
+        $stmtExists->execute();
+        $eventExists = (bool)$stmtExists->get_result()->fetch_assoc();
+        $stmtExists->close();
+        if (!$eventExists) {
+            $conn->close();
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Termin wurde nicht gefunden.']);
+            exit;
+        }
+
         $stmtKat = $conn->prepare(
             'SELECT katid, katname, katcolor
              FROM kategorien
@@ -349,7 +367,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $title,
             $eventId
         );
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            $stmt->close();
+            $conn->close();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Termin konnte nicht aktualisiert werden.']);
+            exit;
+        }
         $stmt->close();
         $conn->close();
 

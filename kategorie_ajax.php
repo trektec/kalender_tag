@@ -47,7 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $conn->prepare('INSERT INTO kategorien (katname, katcolor) VALUES (?, ?)');
         $stmt->bind_param('ss', $katname, $katcolor);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            $stmt->close();
+            $conn->close();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Kategorie konnte nicht erstellt werden.']);
+            exit;
+        }
         $katid = (int)$conn->insert_id;
         $stmt->close();
         $conn->close();
@@ -84,16 +90,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              WHERE katid = ? AND deleted = 0'
         );
         $stmt->bind_param('ssi', $katname, $katcolor, $katid);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            $stmt->close();
+            $conn->close();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Kategorie konnte nicht aktualisiert werden.']);
+            exit;
+        }
+        if ($stmt->affected_rows < 1) {
+            $stmt->close();
+            $conn->close();
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Kategorie wurde nicht gefunden.']);
+            exit;
+        }
         $stmt->close();
 
         $stmtEvents = $conn->prepare(
             'UPDATE events
              SET category = ?, color = ?
-             WHERE katid = ?'
+             WHERE katid = ? AND deleted = 0'
         );
         $stmtEvents->bind_param('ssi', $katname, $katcolor, $katid);
-        $stmtEvents->execute();
+        if (!$stmtEvents->execute()) {
+            $stmtEvents->close();
+            $conn->close();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Kategorieänderung konnte nicht auf Termine angewendet werden.']);
+            exit;
+        }
         $stmtEvents->close();
         $conn->close();
 
@@ -117,12 +142,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $conn->prepare('UPDATE kategorien SET deleted = 1 WHERE katid = ? AND deleted = 0');
         $stmt->bind_param('i', $katid);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            $stmt->close();
+            $conn->close();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Kategorie konnte nicht gelöscht werden.']);
+            exit;
+        }
+        if ($stmt->affected_rows < 1) {
+            $stmt->close();
+            $conn->close();
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Kategorie wurde nicht gefunden.']);
+            exit;
+        }
         $stmt->close();
 
-        $stmtEvents = $conn->prepare('UPDATE events SET katid = NULL WHERE katid = ?');
+        $stmtEvents = $conn->prepare('UPDATE events SET katid = NULL WHERE katid = ? AND deleted = 0');
         $stmtEvents->bind_param('i', $katid);
-        $stmtEvents->execute();
+        if (!$stmtEvents->execute()) {
+            $stmtEvents->close();
+            $conn->close();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Kategorie konnte nicht von Terminen entfernt werden.']);
+            exit;
+        }
         $stmtEvents->close();
         $conn->close();
 
@@ -143,6 +187,12 @@ $result = $conn->query(
      WHERE deleted = 0
      ORDER BY katname ASC'
 );
+if ($result === false) {
+    $conn->close();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Kategorien konnten nicht geladen werden.']);
+    exit;
+}
 
 $categories = [];
 while ($row = $result->fetch_assoc()) {

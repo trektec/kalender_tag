@@ -195,14 +195,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmtEmp->close();
 
-        // Look up the category name for the response
+        // Look up the category name for the response; null category_id if not found
         $categoryName = '';
         if ($categoryId !== null) {
             $stmtCat = $conn->prepare('SELECT name FROM categories WHERE id = ?');
             $stmtCat->bind_param('i', $categoryId);
             $stmtCat->execute();
             $stmtCat->bind_result($categoryName);
-            $stmtCat->fetch();
+            if (!$stmtCat->fetch()) {
+                $categoryId   = null;
+                $categoryName = '';
+            }
             $stmtCat->close();
         }
 

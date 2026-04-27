@@ -17,6 +17,7 @@ const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in
 
 // State
 let employers = [];
+let categories = [];
 let sessions = [];
 let events = [];
 let currentAllDayHeights = null; // Cache for all-day heights
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
     updateDateDisplay();
     await loadEmployers();
+    await loadCategories();
     await loadSessions();
     await loadEvents();
     renderCalendar();
@@ -189,6 +191,41 @@ async function loadEvents() {
         console.error('Fehler beim Laden der Events:', error);
         events = [];
     }
+}
+
+// Load categories from server
+async function loadCategories() {
+    try {
+        const response = await fetch('categories_ajax.php');
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        categories = Array.isArray(data) ? data : [];
+
+    } catch (error) {
+        console.error('Fehler beim Laden der Kategorien:', error);
+        categories = [];
+    }
+}
+
+// Populate a category <select> element with the loaded categories
+function populateCategorySelect(selectId, selectedCategoryId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Keine Kategorie --</option>';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        if (selectedCategoryId !== null && selectedCategoryId !== undefined &&
+                String(cat.id) === String(selectedCategoryId)) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
 }
 
 // Render the complete calendar
@@ -621,7 +658,7 @@ function renderAllDayEvents(employerId, allDayEvents) {
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
         // Remove inline width and left styles to let CSS handle margins properly
-        eventBlock.textContent = event.title || event.category;
+        eventBlock.textContent = event.title || event.category_name;
         
         // Add tooltip
         addTooltipToEvent(eventBlock, event);
@@ -757,7 +794,7 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     // Add event content
     const timeStr = `${event.start_time}-${event.end_time}`;
     eventBlock.innerHTML = `
-        <div class="event-title">${event.title || event.category}</div>
+        <div class="event-title">${event.title || event.category_name}</div>
         <div class="event-time">${timeStr}</div>
     `;
     
@@ -791,7 +828,7 @@ function addTooltipToEvent(eventBlock, event) {
             timeInfo = `${event.start_time} - ${event.end_time}`;
         }
         
-        const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}`;
+        const tooltipText = `${event.title || event.category_name}\n${timeInfo}\nKategorie: ${event.category_name}`;
         
         // Create tooltip
         tooltip = document.createElement('div');
@@ -839,7 +876,7 @@ function openEditModal(event) {
     document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
-    document.getElementById('editEventCategory').value = event.category || '';
+    populateCategorySelect('editEventCategory', event.category_id || null);
     document.getElementById('editEventColor').value = event.color || '#4a90e2';
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
     document.getElementById('editEventStartTime').value = event.start_time || '';
@@ -915,7 +952,8 @@ async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
     const date = document.getElementById('editEventDate').value;
     const title = document.getElementById('editEventTitle').value.trim();
-    const category = document.getElementById('editEventCategory').value.trim();
+    const categoryId = parseInt(document.getElementById('editEventCategory').value) || null;
+    const selectedCat = categoryId ? categories.find(c => c.id === categoryId) : null;
     const color = document.getElementById('editEventColor').value;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
@@ -945,7 +983,7 @@ async function saveEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
-        formData.append('category', category);
+        formData.append('category_id', categoryId !== null ? String(categoryId) : '');
         formData.append('color', color);
         formData.append('is_all_day', isAllDay ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
@@ -988,7 +1026,8 @@ async function saveEventFromModal() {
                 date,
                 date_to: dateTo,
                 title,
-                category,
+                category_id: categoryId,
+                category_name: selectedCat ? selectedCat.name : '',
                 color,
                 is_all_day: isAllDay,
                 start_time: isAllDay ? '' : startTime,
@@ -1023,7 +1062,7 @@ function openNewEventModal() {
     document.getElementById('newEventDate').value = formatDateForAPI(currentDate);
     document.getElementById('newEventDateTo').value = formatDateForAPI(currentDate);
     document.getElementById('newEventTitle').value = '';
-    document.getElementById('newEventCategory').value = '';
+    populateCategorySelect('newEventCategory', null);
     document.getElementById('newEventColor').value = '#4a90e2';
     document.getElementById('newEventIsAllDay').checked = false;
     document.getElementById('newEventStartTime').value = '';
@@ -1053,7 +1092,7 @@ async function createEventFromModal() {
     const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
-    const category = document.getElementById('newEventCategory').value.trim();
+    const categoryId = parseInt(document.getElementById('newEventCategory').value) || null;
     const color = document.getElementById('newEventColor').value;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
@@ -1091,7 +1130,7 @@ async function createEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
-        formData.append('category', category);
+        formData.append('category_id', categoryId !== null ? String(categoryId) : '');
         formData.append('color', color);
         formData.append('is_all_day', isAllDay ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
@@ -1188,6 +1227,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (newEventModal) {
         newEventModal.addEventListener('click', (e) => {
             if (e.target === newEventModal) closeNewEventModal();
+        });
+    }
+
+    // Auto-fill color when a category is selected in the edit modal
+    const editCategorySelect = document.getElementById('editEventCategory');
+    if (editCategorySelect) {
+        editCategorySelect.addEventListener('change', () => {
+            const catId = parseInt(editCategorySelect.value);
+            const cat = categories.find(c => c.id === catId);
+            if (cat) document.getElementById('editEventColor').value = cat.color;
+        });
+    }
+
+    // Auto-fill color when a category is selected in the new event modal
+    const newCategorySelect = document.getElementById('newEventCategory');
+    if (newCategorySelect) {
+        newCategorySelect.addEventListener('change', () => {
+            const catId = parseInt(newCategorySelect.value);
+            const cat = categories.find(c => c.id === catId);
+            if (cat) document.getElementById('newEventColor').value = cat.color;
         });
     }
 });

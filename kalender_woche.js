@@ -828,8 +828,8 @@ async function deleteEventFromModal() {
 
     closeEditModal();
 
-    // Re-render events
-    document.querySelectorAll('.event-block').forEach(el => el.remove());
+    // Re-render calendar and events (recalculates all-day section heights)
+    renderCalendar();
     renderEvents();
 }
 
@@ -923,8 +923,8 @@ async function saveEventFromModal() {
 
     closeEditModal();
 
-    // Re-render events
-    document.querySelectorAll('.event-block').forEach(el => el.remove());
+    // Re-render calendar and events (recalculates all-day section heights)
+    renderCalendar();
     renderEvents();
 }
 
@@ -1055,7 +1055,8 @@ async function createEventFromModal() {
 
             if (result.event.date <= sundayStr && effectiveDateTo >= mondayStr) {
                 events.push(result.event);
-                document.querySelectorAll('.event-block').forEach(el => el.remove());
+                // Re-render calendar and events (recalculates all-day section heights)
+                renderCalendar();
                 renderEvents();
             }
         }

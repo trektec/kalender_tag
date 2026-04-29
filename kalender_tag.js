@@ -944,8 +944,9 @@ async function deleteEventFromModal() {
 
     closeEditModal();
 
-    // Re-render events
-    document.querySelectorAll('.event-block').forEach(el => el.remove());
+    // Re-render calendar and events (recalculates all-day section heights)
+    renderCalendar();
+    renderSessions();
     renderEvents();
 }
 
@@ -1035,8 +1036,9 @@ async function saveEventFromModal() {
 
     closeEditModal();
 
-    // Re-render events
-    document.querySelectorAll('.event-block').forEach(el => el.remove());
+    // Re-render calendar and events (recalculates all-day section heights)
+    renderCalendar();
+    renderSessions();
     renderEvents();
 }
 
@@ -1161,8 +1163,9 @@ async function createEventFromModal() {
             const effectiveDateTo = result.event.date_to || result.event.date;
             if (result.event.date <= currentDateStr && effectiveDateTo >= currentDateStr) {
                 events.push(result.event);
-                // Re-render events
-                document.querySelectorAll('.event-block').forEach(el => el.remove());
+                // Re-render calendar and events (recalculates all-day section heights)
+                renderCalendar();
+                renderSessions();
                 renderEvents();
             }
         }

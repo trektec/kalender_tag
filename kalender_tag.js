@@ -17,6 +17,7 @@ const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in
 
 // State
 let employers = [];
+let categories = [];
 let sessions = [];
 let events = [];
 let currentAllDayHeights = null; // Cache for all-day heights
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
     updateDateDisplay();
     await loadEmployers();
+    await loadCategories();
     await loadSessions();
     await loadEvents();
     renderCalendar();
@@ -104,6 +106,7 @@ function updateDateDisplay() {
 // Reload calendar with current date
 async function reloadCalendar() {
     await loadEmployers();
+    await loadCategories();
     await loadSessions();
     await loadEvents();
     renderCalendar();
@@ -151,6 +154,30 @@ async function loadEmployers() {
             { id: 3, name: 'Peter Weber', department: 'IT', color: '#2ecc71' }
         ];
     }
+}
+
+// Load categories from server
+async function loadCategories() {
+    try {
+        const response = await fetch('category_ajax.php');
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        categories = Array.isArray(data) ? data : [];
+
+    } catch (error) {
+        console.error('Fehler beim Laden der Kategorien:', error);
+        categories = [];
+    }
+}
+
+// Get a category object by its id (returns a default if not found)
+function getCategoryById(id) {
+    const cat = categories.find(c => c.id === id);
+    return cat || { id: 0, name: '', color: '#4a90e2' };
 }
 
 // Load sessions from server
@@ -615,13 +642,14 @@ function renderAllDayEvents(employerId, allDayEvents) {
     
     // Stack events vertically - each event takes full width with proper margins
     allDayEvents.forEach((event, index) => {
+        const cat = getCategoryById(event.category_id);
         const eventBlock = document.createElement('div');
         eventBlock.className = 'event-block all-day-event';
-        eventBlock.style.backgroundColor = event.color;
+        eventBlock.style.backgroundColor = cat.color;
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
         // Remove inline width and left styles to let CSS handle margins properly
-        eventBlock.textContent = event.title || event.category;
+        eventBlock.textContent = event.title || cat.name;
         
         // Add tooltip
         addTooltipToEvent(eventBlock, event);
@@ -746,9 +774,10 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     const leftPosition = EVENT_PADDING + (eventWidth * positionIndex);
     
     // Create event block element
+    const cat = getCategoryById(event.category_id);
     const eventBlock = document.createElement('div');
     eventBlock.className = 'event-block timed-event';
-    eventBlock.style.backgroundColor = event.color;
+    eventBlock.style.backgroundColor = cat.color;
     eventBlock.style.top = `${topPosition}px`;
     eventBlock.style.height = `${eventHeight}px`;
     eventBlock.style.left = `${leftPosition}%`;
@@ -757,7 +786,7 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     // Add event content
     const timeStr = `${event.start_time}-${event.end_time}`;
     eventBlock.innerHTML = `
-        <div class="event-title">${event.title || event.category}</div>
+        <div class="event-title">${event.title || cat.name}</div>
         <div class="event-time">${timeStr}</div>
     `;
     
@@ -791,7 +820,8 @@ function addTooltipToEvent(eventBlock, event) {
             timeInfo = `${event.start_time} - ${event.end_time}`;
         }
         
-        const tooltipText = `${event.title || event.category}\n${timeInfo}\nKategorie: ${event.category}`;
+        const cat = getCategoryById(event.category_id);
+        const tooltipText = `${event.title || cat.name}\n${timeInfo}\nKategorie: ${cat.name}`;
         
         // Create tooltip
         tooltip = document.createElement('div');
@@ -834,13 +864,22 @@ function openEditModal(event) {
     const modal = document.getElementById('eventEditModal');
     if (!modal) return;
 
+    // Populate category dropdown
+    const categorySelect = document.getElementById('editEventCategory');
+    categorySelect.innerHTML = '';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        categorySelect.appendChild(option);
+    });
+    categorySelect.value = event.category_id || 0;
+
     // Populate fields
     document.getElementById('editEventId').value = event.id;
     document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
-    document.getElementById('editEventCategory').value = event.category || '';
-    document.getElementById('editEventColor').value = event.color || '#4a90e2';
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
     document.getElementById('editEventStartTime').value = event.start_time || '';
     document.getElementById('editEventEndTime').value = event.end_time || '';
@@ -915,8 +954,7 @@ async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
     const date = document.getElementById('editEventDate').value;
     const title = document.getElementById('editEventTitle').value.trim();
-    const category = document.getElementById('editEventCategory').value.trim();
-    const color = document.getElementById('editEventColor').value;
+    const categoryId = parseInt(document.getElementById('editEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
@@ -945,8 +983,7 @@ async function saveEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
-        formData.append('category', category);
-        formData.append('color', color);
+        formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
@@ -988,8 +1025,7 @@ async function saveEventFromModal() {
                 date,
                 date_to: dateTo,
                 title,
-                category,
-                color,
+                category_id: categoryId,
                 is_all_day: isAllDay,
                 start_time: isAllDay ? '' : startTime,
                 end_time: isAllDay ? '' : endTime
@@ -1019,12 +1055,20 @@ function openNewEventModal() {
         employerSelect.appendChild(option);
     });
 
+    // Populate category dropdown
+    const categorySelect = document.getElementById('newEventCategory');
+    categorySelect.innerHTML = '';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        categorySelect.appendChild(option);
+    });
+
     // Reset fields
     document.getElementById('newEventDate').value = formatDateForAPI(currentDate);
     document.getElementById('newEventDateTo').value = formatDateForAPI(currentDate);
     document.getElementById('newEventTitle').value = '';
-    document.getElementById('newEventCategory').value = '';
-    document.getElementById('newEventColor').value = '#4a90e2';
     document.getElementById('newEventIsAllDay').checked = false;
     document.getElementById('newEventStartTime').value = '';
     document.getElementById('newEventEndTime').value = '';
@@ -1053,8 +1097,7 @@ async function createEventFromModal() {
     const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
     const date = document.getElementById('newEventDate').value;
     const title = document.getElementById('newEventTitle').value.trim();
-    const category = document.getElementById('newEventCategory').value.trim();
-    const color = document.getElementById('newEventColor').value;
+    const categoryId = parseInt(document.getElementById('newEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
@@ -1091,8 +1134,7 @@ async function createEventFromModal() {
         formData.append('date', date);
         formData.append('date_to', dateTo);
         formData.append('title', title);
-        formData.append('category', category);
-        formData.append('color', color);
+        formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);

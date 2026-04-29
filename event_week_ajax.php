@@ -24,8 +24,7 @@ define('DB_PORT', 3306);
 //     date_to      DATE            NULL DEFAULT NULL,
 //     start_time   TIME            NULL,
 //     end_time     TIME            NULL,
-//     category     VARCHAR(100)    NOT NULL DEFAULT '',
-//     color        VARCHAR(7)      NOT NULL DEFAULT '#4a90e2',
+//     category_id  INT UNSIGNED    NOT NULL DEFAULT 0,
 //     is_all_day   TINYINT(1)      NOT NULL DEFAULT 0,
 //     title        VARCHAR(255)    NOT NULL DEFAULT '',
 //     deleted      TINYINT(1)      NOT NULL DEFAULT 0,
@@ -46,6 +45,12 @@ define('DB_PORT', 3306);
 //
 // To add date_to to an existing table:
 //   ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
+//
+// To migrate from category+color to category_id:
+//   ALTER TABLE events
+//     ADD COLUMN category_id INT UNSIGNED NOT NULL DEFAULT 0 AFTER end_time,
+//     DROP COLUMN category,
+//     DROP COLUMN color;
 // ============================================================
 
 // ============================================================
@@ -75,15 +80,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $employerId = $employerIds[0]; // primary employer for backward compatibility
 
-        $userId     = isset($_POST['user_id'])     ? $_POST['user_id']     : '1';
-        $date       = isset($_POST['date'])        ? trim($_POST['date'])  : '';
-        $title      = isset($_POST['title'])       ? trim($_POST['title']) : '';
-        $category   = isset($_POST['category'])    ? trim($_POST['category']) : '';
-        $color      = isset($_POST['color'])       ? trim($_POST['color']) : '#4a90e2';
-        $isAllDay   = isset($_POST['is_all_day'])  ? (bool)$_POST['is_all_day'] : false;
-        $startTime  = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
-        $endTime    = isset($_POST['end_time'])    ? trim($_POST['end_time'])   : '';
-        $dateTo     = isset($_POST['date_to'])     ? trim($_POST['date_to'])    : '';
+        $userId     = isset($_POST['user_id'])      ? $_POST['user_id']      : '1';
+        $date       = isset($_POST['date'])          ? trim($_POST['date'])   : '';
+        $title      = isset($_POST['title'])         ? trim($_POST['title'])  : '';
+        $categoryId = isset($_POST['category_id'])   ? $_POST['category_id'] : '0';
+        $isAllDay   = isset($_POST['is_all_day'])    ? (bool)$_POST['is_all_day'] : false;
+        $startTime  = isset($_POST['start_time'])    ? trim($_POST['start_time']) : '';
+        $endTime    = isset($_POST['end_time'])      ? trim($_POST['end_time'])   : '';
+        $dateTo     = isset($_POST['date_to'])       ? trim($_POST['date_to'])    : '';
 
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             http_response_code(400);
@@ -103,9 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
-            $color = '#4a90e2';
-        }
+        $categoryId = filter_var($categoryId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) !== false
+                      ? (int)$categoryId : 0;
 
         if (!$isAllDay) {
             if (!preg_match('/^\d{2}:\d{2}$/', $startTime) || !preg_match('/^\d{2}:\d{2}$/', $endTime)) {
@@ -143,19 +146,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $conn->prepare(
             'INSERT INTO events
                  (employer_id, user_id, date, date_to, start_time, end_time,
-                  category, color, is_all_day, title)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                  category_id, is_all_day, title)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->bind_param(
-            'iissssssis',
+            'iisssssis',
             $employerId,
             $userId,
             $date,
             $dateTo,
             $startTime,
             $endTime,
-            $category,
-            $color,
+            $categoryId,
             $isAllDayInt,
             $title
         );
@@ -181,8 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'date_to'      => $dateTo,
             'start_time'   => $startTime ?? '',
             'end_time'     => $endTime   ?? '',
-            'category'     => $category,
-            'color'        => $color,
+            'category_id'  => $categoryId,
             'is_all_day'   => $isAllDay,
             'title'        => $title,
         ];
@@ -195,15 +196,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // EDIT (update) an existing event
     // ----------------------------------------------------------
     if ($action === 'edit') {
-        $eventId   = isset($_POST['event_id'])   ? $_POST['event_id']         : '';
-        $date      = isset($_POST['date'])        ? trim($_POST['date'])       : '';
-        $title     = isset($_POST['title'])       ? trim($_POST['title'])      : '';
-        $category  = isset($_POST['category'])    ? trim($_POST['category'])   : '';
-        $color     = isset($_POST['color'])       ? trim($_POST['color'])      : '#4a90e2';
-        $isAllDay  = isset($_POST['is_all_day'])  ? (bool)$_POST['is_all_day'] : false;
-        $startTime = isset($_POST['start_time'])  ? trim($_POST['start_time']) : '';
-        $endTime   = isset($_POST['end_time'])    ? trim($_POST['end_time'])   : '';
-        $dateTo    = isset($_POST['date_to'])     ? trim($_POST['date_to'])    : '';
+        $eventId    = isset($_POST['event_id'])    ? $_POST['event_id']         : '';
+        $date       = isset($_POST['date'])         ? trim($_POST['date'])       : '';
+        $title      = isset($_POST['title'])        ? trim($_POST['title'])      : '';
+        $categoryId = isset($_POST['category_id'])  ? $_POST['category_id']     : '0';
+        $isAllDay   = isset($_POST['is_all_day'])   ? (bool)$_POST['is_all_day'] : false;
+        $startTime  = isset($_POST['start_time'])   ? trim($_POST['start_time']) : '';
+        $endTime    = isset($_POST['end_time'])     ? trim($_POST['end_time'])   : '';
+        $dateTo     = isset($_POST['date_to'])      ? trim($_POST['date_to'])    : '';
 
         if (filter_var($eventId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
             http_response_code(400);
@@ -229,9 +229,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
-            $color = '#4a90e2';
-        }
+        $categoryId = filter_var($categoryId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) !== false
+                      ? (int)$categoryId : 0;
 
         if (!$isAllDay) {
             if (!preg_match('/^\d{2}:\d{2}$/', $startTime) || !preg_match('/^\d{2}:\d{2}$/', $endTime)) {
@@ -267,24 +266,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $conn->prepare(
             'UPDATE events
-             SET    date       = ?,
-                    date_to    = ?,
-                    start_time = ?,
-                    end_time   = ?,
-                    category   = ?,
-                    color      = ?,
-                    is_all_day = ?,
-                    title      = ?
+             SET    date        = ?,
+                    date_to     = ?,
+                    start_time  = ?,
+                    end_time    = ?,
+                    category_id = ?,
+                    is_all_day  = ?,
+                    title       = ?
              WHERE  id = ? AND deleted = 0'
         );
         $stmt->bind_param(
-            'ssssssisi',
+            'ssssisi',
             $date,
             $dateTo,
             $startTime,
             $endTime,
-            $category,
-            $color,
+            $categoryId,
             $isAllDayInt,
             $title,
             $eventId
@@ -368,7 +365,7 @@ $stmt = $conn->prepare(
             DATE_FORMAT(e.date_to, \'%Y-%m-%d\') AS date_to,
             IFNULL(TIME_FORMAT(e.start_time, \'%H:%i\'), \'\') AS start_time,
             IFNULL(TIME_FORMAT(e.end_time,   \'%H:%i\'), \'\') AS end_time,
-            e.category, e.color, e.is_all_day, e.title,
+            e.category_id, e.is_all_day, e.title,
             GROUP_CONCAT(DISTINCT ee.employer_id ORDER BY ee.employer_id) AS employer_ids_str
      FROM   events e
      LEFT JOIN event_employers ee ON ee.event_id = e.id
@@ -383,18 +380,19 @@ $result = $stmt->get_result();
 $events = [];
 
 while ($row = $result->fetch_assoc()) {
-    $row['id']          = (int)$row['id'];
-    $row['employer_id'] = (int)$row['employer_id'];
-    $row['user_id']     = (int)$row['user_id'];
-    $row['is_all_day']  = (bool)$row['is_all_day'];
+    $row['id']           = (int)$row['id'];
+    $row['employer_id']  = (int)$row['employer_id'];
+    $row['user_id']      = (int)$row['user_id'];
+    $row['category_id']  = (int)$row['category_id'];
+    $row['is_all_day']   = (bool)$row['is_all_day'];
     // Normalize date_to: fall back to date if not set
-    $row['date_to']     = $row['date_to'] ?? $row['date'];
+    $row['date_to']      = $row['date_to'] ?? $row['date'];
     // Parse employer_ids from GROUP_CONCAT result; fall back to primary employer_id
     $row['employer_ids'] = $row['employer_ids_str'] !== null
         ? array_map('intval', explode(',', $row['employer_ids_str']))
         : [$row['employer_id']];
     unset($row['employer_ids_str']);
-    $events[]           = $row;
+    $events[]            = $row;
 }
 
 $stmt->close();

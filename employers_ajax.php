@@ -1,14 +1,34 @@
 <?php
 header('Content-Type: application/json');
 
-// Sample employer data
-// In a real application, this would come from a database
-$employers = [
-    ['id' => 1, 'name' => 'Max Mustermann', 'department' => 'Vertrieb', 'color' => '#4a90e2'],
-    ['id' => 2, 'name' => 'Anna Schmidt', 'department' => 'Marketing', 'color' => '#e74c3c'],
-    ['id' => 3, 'name' => 'Peter Weber', 'department' => 'IT', 'color' => '#2ecc71'],
-    ['id' => 4, 'name' => 'Julia Müller', 'department' => 'HR', 'color' => '#f39c12']
-];
+require_once 'event_iec_db.php';
+
+try {
+    $conn = getDbConnection();
+
+    $result = $conn->query('SELECT user_id, user_kalender_name FROM a_tab_user ORDER BY user_kalender_name ASC');
+
+    if ($result === false) {
+        throw new RuntimeException('Datenbankabfrage fehlgeschlagen: ' . $conn->error);
+    }
+
+    $employers = [];
+    while ($row = $result->fetch_assoc()) {
+        $employers[] = [
+            'id'         => (int)$row['user_id'],
+            'name'       => $row['user_kalender_name'],
+            'department' => '',
+            'color'      => '',
+        ];
+    }
+
+    $result->free();
+    $conn->close();
+} catch (RuntimeException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit;
+}
 
 echo json_encode($employers);
 ?>

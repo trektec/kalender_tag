@@ -649,7 +649,8 @@ function renderAllDayEvents(employerId, allDayEvents) {
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
         // Inline-Styles für Breite und linke Position entfernen, damit CSS die Abstände korrekt steuert
-        eventBlock.textContent = event.title || cat.name;
+        const carIcon = event.has_car ? ' 🚗' : '';
+        eventBlock.textContent = (event.title || cat.name) + carIcon;
         
         // Tooltip hinzufügen
         addTooltipToEvent(eventBlock, event);
@@ -785,8 +786,9 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     
     // Termininhalt hinzufügen
     const timeStr = `${event.start_time}-${event.end_time}`;
+    const carIcon = event.has_car ? ' 🚗' : '';
     eventBlock.innerHTML = `
-        <div class="event-title">${event.title || cat.name}</div>
+        <div class="event-title">${event.title || cat.name}${carIcon}</div>
         <div class="event-time">${timeStr}</div>
     `;
     
@@ -881,6 +883,7 @@ function openEditModal(event) {
     document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
+    document.getElementById('editEventHasCar').checked = !!event.has_car;
     document.getElementById('editEventStartTime').value = event.start_time || '';
     document.getElementById('editEventEndTime').value = event.end_time || '';
     toggleTimeFields(!event.is_all_day);
@@ -957,6 +960,7 @@ async function saveEventFromModal() {
     const title = document.getElementById('editEventTitle').value.trim();
     const categoryId = parseInt(document.getElementById('editEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
+    const hasCar = document.getElementById('editEventHasCar').checked;
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
@@ -986,6 +990,7 @@ async function saveEventFromModal() {
         formData.append('title', title);
         formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('has_car', hasCar ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 
@@ -1028,6 +1033,7 @@ async function saveEventFromModal() {
                 title,
                 category_id: categoryId,
                 is_all_day: isAllDay,
+                has_car: hasCar,
                 start_time: isAllDay ? '' : startTime,
                 end_time: isAllDay ? '' : endTime
             };
@@ -1072,6 +1078,7 @@ function openNewEventModal() {
     document.getElementById('newEventDateTo').value = formatDateForAPI(currentDate);
     document.getElementById('newEventTitle').value = '';
     document.getElementById('newEventIsAllDay').checked = false;
+    document.getElementById('newEventHasCar').checked = false;
     document.getElementById('newEventStartTime').value = '';
     document.getElementById('newEventEndTime').value = '';
     toggleNewEventTimeFields(true);
@@ -1101,6 +1108,7 @@ async function createEventFromModal() {
     const title = document.getElementById('newEventTitle').value.trim();
     const categoryId = parseInt(document.getElementById('newEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
+    const hasCar = document.getElementById('newEventHasCar').checked;
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
@@ -1138,6 +1146,7 @@ async function createEventFromModal() {
         formData.append('title', title);
         formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('has_car', hasCar ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 

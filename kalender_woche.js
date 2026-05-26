@@ -1,21 +1,21 @@
-// Configuration - Adjust these values to customize the calendar
+// Konfiguration - Passe diese Werte an, um den Kalender anzupassen
 const START_HOUR = 6;
 const END_HOUR = 18;
 
-// User configuration - set CURRENT_USER_ID to the ID of the logged-in user (null = not logged in)
-// Set IS_SUPERUSER to true to allow editing all events regardless of ownership
+// Benutzerkonfiguration - setze CURRENT_USER_ID auf die ID des angemeldeten Benutzers (null = nicht angemeldet)
+// Setze IS_SUPERUSER auf true, um das Bearbeiten aller Termine unabhängig vom Besitzer zu erlauben
 const CURRENT_USER_ID = null;
 const IS_SUPERUSER = false;
-const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
-const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section in pixels
-const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
-const ALL_DAY_BOTTOM_SPACING = 10; // Adjustable spacing after the last all-day entry in pixels
-const MIN_EVENTS_FOR_DYNAMIC_HEIGHT = 3; // Minimum number of all-day events to use dynamic height without minimum constraint
-const COLUMN_GAP = 0; // Gap between columns in pixels
-const DAY_HEADER_HEIGHT = 40; // Height of day name header in pixels
-const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in pixels
+const HOUR_HEIGHT = 60; // Höhe jedes Stundenfelds in Pixeln
+const ALL_DAY_HEIGHT = 60; // Mindesthöhe des Ganztagstermin-Bereichs in Pixeln
+const ALL_DAY_EVENT_HEIGHT = 30; // Höhe jedes einzelnen Ganztagstermins in Pixeln
+const ALL_DAY_BOTTOM_SPACING = 10; // Anpassbarer Abstand nach dem letzten Ganztagseintrag in Pixeln
+const MIN_EVENTS_FOR_DYNAMIC_HEIGHT = 3; // Mindestanzahl an Ganztagsterminen, um die dynamische Höhe ohne Mindestbeschränkung zu verwenden
+const COLUMN_GAP = 0; // Abstand zwischen den Spalten in Pixeln
+const DAY_HEADER_HEIGHT = 40; // Höhe der Tageskopfzeile in Pixeln
+const EVENT_PADDING = 2; // Innen-/Außenabstand von den Spaltenrändern für Terminblöcke in Pixeln
 
-// Day header colors – one entry per weekday (index 0 = Monday … 6 = Sunday)
+// Farben der Tageskopfzeilen – ein Eintrag pro Wochentag (Index 0 = Montag … 6 = Sonntag)
 const DAY_COLORS = [
     '#4a90e2', // Montag
     '#4a90e2', // Dienstag
@@ -25,57 +25,57 @@ const DAY_COLORS = [
     '#4a90e2', // Samstag
     '#4a90e2', // Sonntag
 ];
-// Color for the header of today's column
+// Farbe für die Kopfzeile der heutigen Spalte
 const TODAY_COLOR = '#2ecc71';
 
-// State
+// Status
 let employers = [];
 let categories = [];
 let events = [];
-let currentAllDayHeights = null; // Cache for all-day heights
-let currentDate = new Date(); // Current selected date (we'll calculate Monday of this week)
+let currentAllDayHeights = null; // Cache für Ganztagshöhen
+let currentDate = new Date(); // Aktuell ausgewähltes Datum (wir berechnen den Montag dieser Woche)
 
-// Days of week in German
+// Wochentage auf Deutsch
 const DAYS_OF_WEEK = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 const DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
-// Helper function to validate hex color format
+// Hilfsfunktion zum Validieren des Hex-Farbformats
 function isValidHexColor(color) {
     return /^#[0-9A-Fa-f]{6}$/.test(color);
 }
 
-// Helper function to calculate luminance of a color
+// Hilfsfunktion zum Berechnen der Luminanz einer Farbe
 function getLuminance(hexColor) {
-    // Convert hex to RGB
+    // Hex in RGB umwandeln
     const r = parseInt(hexColor.substring(1, 3), 16) / 255;
     const g = parseInt(hexColor.substring(3, 5), 16) / 255;
     const b = parseInt(hexColor.substring(5, 7), 16) / 255;
     
-    // Apply gamma correction
+    // Gammakorrektur anwenden
     const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
     const gsRGB = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
     const bsRGB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
     
-    // Calculate luminance
+    // Luminanz berechnen
     return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
 }
 
-// Helper function to get contrasting text color (white or black)
+// Hilfsfunktion zum Ermitteln einer kontrastierenden Textfarbe (weiß oder schwarz)
 function getContrastingTextColor(hexColor) {
     const luminance = getLuminance(hexColor);
-    // Use white text for dark backgrounds, black text for light backgrounds
+    // Verwende weißen Text für dunkle Hintergründe und schwarzen Text für helle Hintergründe
     return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
-// Get Monday of the week for a given date
+// Den Montag der Woche für ein gegebenes Datum ermitteln
 function getMondayOfWeek(date) {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Anpassen, wenn der Tag Sonntag ist
     return new Date(d.setDate(diff));
 }
 
-// Get array of dates for the week (Monday to Sunday)
+// Array der Daten für die Woche abrufen (Montag bis Sonntag)
 function getWeekDates(mondayDate) {
     const dates = [];
     for (let i = 0; i < 7; i++) {
@@ -86,7 +86,7 @@ function getWeekDates(mondayDate) {
     return dates;
 }
 
-// Initialize calendar on page load
+// Kalender beim Laden der Seite initialisieren
 document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
     updateWeekDisplay();
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeTimeline();
 });
 
-// Setup navigation button handlers
+// Ereignishandler für Navigationsschaltflächen einrichten
 function setupNavigationHandlers() {
     document.getElementById('prevWeekBtn').addEventListener('click', () => {
         changeWeek(-7);
@@ -116,7 +116,7 @@ function setupNavigationHandlers() {
     if (newEventBtn) newEventBtn.addEventListener('click', openNewEventModal);
 }
 
-// Change current date by days offset
+// Aktuelles Datum um einen Tagesoffset ändern
 async function changeWeek(daysOffset) {
     currentDate = new Date(currentDate.getTime());
     currentDate.setDate(currentDate.getDate() + daysOffset);
@@ -124,14 +124,14 @@ async function changeWeek(daysOffset) {
     await reloadCalendar();
 }
 
-// Set current date to this week
+// Aktuelles Datum auf diese Woche setzen
 async function setThisWeek() {
     currentDate = new Date();
     updateWeekDisplay();
     await reloadCalendar();
 }
 
-// Update the week display
+// Wochenanzeige aktualisieren
 function updateWeekDisplay() {
     const monday = getMondayOfWeek(currentDate);
     const sunday = new Date(monday);
@@ -144,17 +144,17 @@ function updateWeekDisplay() {
     dateDisplay.textContent = `${mondayString} - ${sundayString}`;
 }
 
-// Reload calendar with current week
+// Kalender mit aktueller Woche neu laden
 async function reloadCalendar() {
     await loadCategories();
     await loadEvents();
     renderCalendar();
     renderEvents();
-    createTimelineElement(); // Recreate timeline element after calendar is re-rendered
+    createTimelineElement(); // Zeitleisten-Element neu erstellen, nachdem der Kalender neu gerendert wurde
     updateTimeline();
 }
 
-// Format date for API calls (YYYY-MM-DD)
+// Datum für API-Aufrufe formatieren (YYYY-MM-DD)
 function formatDateForAPI(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -162,7 +162,7 @@ function formatDateForAPI(date) {
     return `${year}-${month}-${day}`;
 }
 
-// Load employers from server
+// Mitarbeiter vom Server laden
 async function loadEmployers() {
     try {
         const response = await fetch('employers_ajax.php');
@@ -177,7 +177,7 @@ async function loadEmployers() {
     }
 }
 
-// Load categories from server
+// Kategorien vom Server laden
 async function loadCategories() {
     try {
         const response = await fetch('category_ajax.php');
@@ -195,13 +195,13 @@ async function loadCategories() {
     }
 }
 
-// Get a category object by its id (returns a default if not found)
+// Ein Kategorieobjekt anhand seiner ID abrufen (gibt einen Standardwert zurück, wenn keines gefunden wird)
 function getCategoryById(id) {
     const cat = categories.find(c => c.id === id);
     return cat || { id: 0, name: '', color: '#4a90e2' };
 }
 
-// Load events from server
+// Termine vom Server laden
 async function loadEvents() {
     
     try {
@@ -222,36 +222,36 @@ async function loadEvents() {
     }
 }
 
-// Render the complete calendar
+// Den vollständigen Kalender rendern
 function renderCalendar() {
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
     
-    // Get week dates
+    // Wochendaten abrufen
     const monday = getMondayOfWeek(currentDate);
     const weekDates = getWeekDates(monday);
     
-    // Calculate all-day section heights for each day
+    // Die Höhe des Ganztagsbereichs für jeden Tag berechnen
     const allDayHeights = calculateAllDayHeights(weekDates);
-    currentAllDayHeights = allDayHeights; // Cache for later use
+    currentAllDayHeights = allDayHeights; // Für die spätere Verwendung zwischenspeichern
     
-    // Create left time column
+    // Linke Zeitspalte erstellen
     const timeColumnLeft = createTimeColumn(allDayHeights);
     calendarDiv.appendChild(timeColumnLeft);
     
-    // Create day columns
+    // Tagesspalten erstellen
     weekDates.forEach((date, index) => {
         const isLastDay = index === weekDates.length - 1;
         const dayColumn = createDayColumn(date, index, isLastDay, allDayHeights);
         calendarDiv.appendChild(dayColumn);
     });
     
-    // Create right time column
+    // Rechte Zeitspalte erstellen
     const timeColumnRight = createTimeColumn(allDayHeights);
     calendarDiv.appendChild(timeColumnRight);
 }
 
-// Helper function to get the current header height (day header + all-day section)
+// Hilfsfunktion zum Ermitteln der aktuellen Kopfzeilenhöhe (Tageskopfzeile + Ganztagsbereich)
 function getHeaderHeight() {
     if (currentAllDayHeights) {
         return DAY_HEADER_HEIGHT + currentAllDayHeights.maxHeight;
@@ -259,12 +259,12 @@ function getHeaderHeight() {
     return DAY_HEADER_HEIGHT + ALL_DAY_HEIGHT;
 }
 
-// Calculate the height needed for all-day section for each day
+// Die für den Ganztagsbereich jedes Tages benötigte Höhe berechnen
 function calculateAllDayHeights(weekDates) {
     const allDayHeights = {};
-    let maxAllDayEvents = 0; // Start with 0
+    let maxAllDayEvents = 0; // Mit 0 beginnen
     
-    // Group events by day
+    // Termine nach Tag gruppieren
     weekDates.forEach((date, index) => {
         const dateStr = formatDateForAPI(date);
         const dayAllDayEvents = events.filter(e => {
@@ -276,30 +276,30 @@ function calculateAllDayHeights(weekDates) {
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
     });
     
-    // Calculate the total height needed
-    // Account for each event height plus bottom spacing
+    // Die benötigte Gesamthöhe berechnen
+    // Jede Terminhöhe plus unteren Abstand berücksichtigen
     const calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
     
-    // When there are MIN_EVENTS_FOR_DYNAMIC_HEIGHT or more events, don't constrain by ALL_DAY_HEIGHT minimum
-    // to ensure nothing is cut off and there's proper spacing
+    // Wenn MIN_EVENTS_FOR_DYNAMIC_HEIGHT oder mehr Termine vorhanden sind, nicht durch das Mindestmaß ALL_DAY_HEIGHT begrenzen
+    // damit nichts abgeschnitten wird und der Abstand korrekt ist
     const maxHeight = maxAllDayEvents >= MIN_EVENTS_FOR_DYNAMIC_HEIGHT ? calculatedHeight : Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
     return { perDay: allDayHeights, maxHeight: maxHeight };
 }
 
-// Create time column with hours
+// Zeitspalte mit Stunden erstellen
 function createTimeColumn(allDayHeights) {
     const column = document.createElement('div');
     column.className = 'time-column';
     
-    // Header (must match day header + all-day section height)
+    // Kopfzeile (muss zur Tageskopfzeile + Höhe des Ganztagsbereichs passen)
     const header = document.createElement('div');
     header.className = 'time-header';
     header.style.height = `${DAY_HEADER_HEIGHT + allDayHeights.maxHeight}px`;
     header.textContent = 'Zeit';
     column.appendChild(header);
     
-    // Hours
+    // Stunden
     for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
         const timeSlot = document.createElement('div');
         timeSlot.className = 'time-slot';
@@ -311,29 +311,29 @@ function createTimeColumn(allDayHeights) {
     return column;
 }
 
-// Create day column with all-day section and hours
+// Tagesspalte mit Ganztagsbereich und Stunden erstellen
 function createDayColumn(date, dayIndex, isLastDay = false, allDayHeights) {
     const column = document.createElement('div');
-    column.className = 'employer-column'; // Reuse employer-column CSS class
+    column.className = 'employer-column'; // CSS-Klasse employer-column wiederverwenden
     column.dataset.dayIndex = dayIndex;
     column.dataset.date = formatDateForAPI(date);
     
-    // Apply column gap via margin, but not for the last day
+    // Spaltenabstand per Margin anwenden, aber nicht für den letzten Tag
     if (COLUMN_GAP > 0 && !isLastDay) {
         column.style.marginRight = `${COLUMN_GAP}px`;
     }
     
-    // Day name header
+    // Kopfzeile mit Tagesnamen
     const header = document.createElement('div');
     header.className = 'employer-header'; // Reuse employer-header CSS class
     header.style.height = `${DAY_HEADER_HEIGHT}px`;
     
-    // Get day of week
+    // Wochentag abrufen
     const dayOfWeek = DAYS_OF_WEEK[dayIndex];
     const dayOfMonth = date.getDate();
     const month = date.getMonth() + 1;
     
-    // Check if this is today
+    // Prüfen, ob dies heute ist
     const today = new Date();
     const isToday = date.getDate() === today.getDate() && 
                     date.getMonth() === today.getMonth() && 
@@ -341,7 +341,7 @@ function createDayColumn(date, dayIndex, isLastDay = false, allDayHeights) {
     
     header.textContent = `${dayOfWeek}, ${dayOfMonth}.${month}.`;
     
-    // Highlight today with a different color
+    // Heute mit einer anderen Farbe hervorheben
     if (isToday) {
         header.style.backgroundColor = TODAY_COLOR;
         header.style.color = getContrastingTextColor(TODAY_COLOR);
@@ -353,13 +353,13 @@ function createDayColumn(date, dayIndex, isLastDay = false, allDayHeights) {
     
     column.appendChild(header);
     
-    // All-day section (use max height across all days)
+    // Ganztagsbereich (maximale Höhe über alle Tage verwenden)
     const allDaySection = document.createElement('div');
     allDaySection.className = 'all-day-section';
     allDaySection.style.height = `${allDayHeights.maxHeight}px`;
     column.appendChild(allDaySection);
     
-    // Hour slots
+    // Stundenfelder
     for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
         const hourSlot = document.createElement('div');
         hourSlot.className = 'hour-slot';
@@ -371,11 +371,11 @@ function createDayColumn(date, dayIndex, isLastDay = false, allDayHeights) {
     return column;
 }
 
-// Timeline functionality
+// Zeitleistenfunktionalität
 function initializeTimeline() {
     createTimelineElement();
     updateTimeline();
-    // Update timeline every 30 seconds
+    // Zeitleiste alle 30 Sekunden aktualisieren
     setInterval(() => {
         updateTimeline();
     }, 30000);
@@ -384,23 +384,23 @@ function initializeTimeline() {
 function createTimelineElement() {
     const calendarGrid = document.getElementById('calendar');
     
-    // Remove existing timeline if present
+    // Vorhandene Zeitleiste entfernen, falls vorhanden
     const existingTimeline = document.getElementById('timeline');
     if (existingTimeline) {
         existingTimeline.remove();
     }
     
-    // Create timeline container
+    // Zeitleisten-Container erstellen
     const timelineContainer = document.createElement('div');
     timelineContainer.className = 'timeline-container';
     timelineContainer.id = 'timeline';
     
-    // Create time indicator (left side with white text)
+    // Zeitindikator erstellen (linke Seite mit weißem Text)
     const timeIndicator = document.createElement('div');
     timeIndicator.className = 'timeline-indicator';
     timeIndicator.id = 'timeline-indicator';
     
-    // Create red line (spans across columns)
+    // Rote Linie erstellen (verläuft über die Spalten)
     const timelineLine = document.createElement('div');
     timelineLine.className = 'timeline-line';
     
@@ -414,9 +414,9 @@ function updateTimeline() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // Check if current time is within calendar hours
+    // Prüfen, ob die aktuelle Uhrzeit innerhalb der Kalenderstunden liegt
     if (currentHour < START_HOUR || currentHour > END_HOUR) {
-        // Hide timeline if outside calendar hours
+        // Zeitleiste ausblenden, wenn außerhalb der Kalenderstunden
         const timeline = document.getElementById('timeline');
         if (timeline) {
             timeline.style.display = 'none';
@@ -424,7 +424,7 @@ function updateTimeline() {
         return;
     }
     
-    // Check if today is within the current week
+    // Prüfen, ob heute in der aktuellen Woche liegt
     const monday = getMondayOfWeek(currentDate);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
@@ -434,7 +434,7 @@ function updateTimeline() {
     todayStart.setHours(0, 0, 0, 0);
     
     if (todayStart < monday || todayStart > sunday) {
-        // Today is not in the current week, hide timeline
+        // Heute liegt nicht in der aktuellen Woche, Zeitleiste ausblenden
         const timeline = document.getElementById('timeline');
         if (timeline) {
             timeline.style.display = 'none';
@@ -442,16 +442,16 @@ function updateTimeline() {
         return;
     }
     
-    // Calculate position
+    // Position berechnen
     const hoursSinceStart = currentHour - START_HOUR;
     const minutesFraction = currentMinute / 60;
-    const totalHoursFraction = hoursSinceStart + minutesFraction;
+    const totalStundenFraction = hoursSinceStart + minutesFraction;
     
-    // Calculate top position (header height + all-day height + hour position)
+    // Obere Position berechnen (Kopfzeilenhöhe + Ganztagshöhe + Stundenposition)
     const headerHeight = getHeaderHeight();
-    const topPosition = headerHeight + (totalHoursFraction * HOUR_HEIGHT);
+    const topPosition = headerHeight + (totalStundenFraction * HOUR_HEIGHT);
     
-    // Update timeline position
+    // Position der Zeitleiste aktualisieren
     const timeline = document.getElementById('timeline');
     const timeIndicator = document.getElementById('timeline-indicator');
     
@@ -459,19 +459,19 @@ function updateTimeline() {
         timeline.style.display = 'block';
         timeline.style.top = `${topPosition}px`;
         
-        // Format time as HH:MM
+        // Zeit als HH:MM formatieren
         timeIndicator.textContent = formatTime(currentHour, currentMinute);
     }
 }
 
-// Helper function to format time as HH:MM
+// Hilfsfunktion zum Formatieren der Zeit als HH:MM
 function formatTime(hour, minute) {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-// Render event blocks for all days
+// Terminblöcke für alle Tage rendern
 function renderEvents() {
-    // Group events by day and type (all-day vs timed)
+    // Termine nach Tag und Typ gruppieren (ganztägig vs. zeitgebunden)
     const monday = getMondayOfWeek(currentDate);
     const weekDates = getWeekDates(monday);
     
@@ -490,7 +490,7 @@ function renderEvents() {
     });
 }
 
-// Render all-day events in the all-day section
+// Ganztagstermine im Ganztagsbereich rendern
 function renderAllDayEvents(dayIndex, allDayEvents) {
     const dayColumn = document.querySelector(`.employer-column[data-day-index="${dayIndex}"]`);
     
@@ -504,7 +504,7 @@ function renderAllDayEvents(dayIndex, allDayEvents) {
         return;
     }
     
-    // Stack events vertically - each event takes full width with proper margins
+    // Termine vertikal stapeln - jeder Termin nimmt die volle Breite mit passenden Abständen ein
     allDayEvents.forEach((event, index) => {
         const cat = getCategoryById(event.category_id);
         const eventBlock = document.createElement('div');
@@ -518,10 +518,10 @@ function renderAllDayEvents(dayIndex, allDayEvents) {
             ? `<span class="event-title-text">${allDayTitle}</span><span class="event-employers"> | ${allDayNames}</span>`
             : `<span class="event-title-text">${allDayTitle}</span>`;
         
-        // Add tooltip with employee info
+        // Tooltip mit Mitarbeiterinformationen hinzufügen
         addTooltipToEvent(eventBlock, event);
         
-        // Add edit click handler if user can edit this event
+        // Klick-Handler zum Bearbeiten hinzufügen, wenn der Benutzer diesen Termin bearbeiten darf
         if (canEditEvent(event)) {
             eventBlock.classList.add('editable-event');
             eventBlock.addEventListener('click', (e) => {
@@ -534,7 +534,7 @@ function renderAllDayEvents(dayIndex, allDayEvents) {
     });
 }
 
-// Render timed events in the hour slots
+// Zeitgebundene Termine in den Stundenfeldern rendern
 function renderTimedEvents(dayIndex, timedEvents) {
     const dayColumn = document.querySelector(`.employer-column[data-day-index="${dayIndex}"]`);
     
@@ -542,18 +542,18 @@ function renderTimedEvents(dayIndex, timedEvents) {
         return;
     }
     
-    // Detect overlapping events and group them
+    // Überlappende Termine erkennen und gruppieren
     const eventGroups = detectOverlappingEvents(timedEvents);
     
-    // Render each group
+    // Jede Gruppe rendern
     eventGroups.forEach(group => {
         renderEventGroup(dayColumn, group);
     });
 }
 
-// Detect overlapping events and return groups
+// Überlappende Termine erkennen und Gruppen zurückgeben
 function detectOverlappingEvents(events) {
-    // Sort events by start time
+    // Termine nach Startzeit sortieren
     const sortedEvents = [...events].sort((a, b) => {
         return timeToMinutes(a.start_time) - timeToMinutes(b.start_time);
     });
@@ -561,11 +561,11 @@ function detectOverlappingEvents(events) {
     const groups = [];
     
     sortedEvents.forEach(event => {
-        // Find a group where this event overlaps
+        // Eine Gruppe finden, in der sich dieser Termin überlappt
         let addedToGroup = false;
         
         for (let group of groups) {
-            // Check if event overlaps with any event in the group
+            // Prüfen, ob sich der Termin mit irgendeinem Termin in der Gruppe überlappt
             const overlaps = group.some(groupEvent => {
                 return eventsOverlap(event, groupEvent);
             });
@@ -577,7 +577,7 @@ function detectOverlappingEvents(events) {
             }
         }
         
-        // If no overlap found, create a new group
+        // Wenn keine Überlappung gefunden wurde, eine neue Gruppe erstellen
         if (!addedToGroup) {
             groups.push([event]);
         }
@@ -586,7 +586,7 @@ function detectOverlappingEvents(events) {
     return groups;
 }
 
-// Check if two events overlap
+// Prüfen, ob sich zwei Termine überlappen
 function eventsOverlap(event1, event2) {
     const start1 = timeToMinutes(event1.start_time);
     const end1 = timeToMinutes(event1.end_time);
@@ -596,13 +596,13 @@ function eventsOverlap(event1, event2) {
     return start1 < end2 && start2 < end1;
 }
 
-// Convert time string (HH:MM) to minutes since midnight
+// Zeitstring (HH:MM) in Minuten seit Mitternacht umwandeln
 function timeToMinutes(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number);
     return hours * 60 + minutes;
 }
 
-// Render a group of overlapping events side by side
+// Eine Gruppe überlappender Termine nebeneinander rendern
 function renderEventGroup(dayColumn, eventGroup) {
     const groupSize = eventGroup.length;
     const eventWidth = (100 - (EVENT_PADDING * 2)) / groupSize;
@@ -612,24 +612,24 @@ function renderEventGroup(dayColumn, eventGroup) {
     });
 }
 
-// Render a single timed event
+// Einen einzelnen zeitgebundenen Termin rendern
 function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWidth) {
-    // Parse start and end times
+    // Start- und Endzeiten parsen
     const [startHour, startMinute] = event.start_time.split(':').map(Number);
     const [endHour, endMinute] = event.end_time.split(':').map(Number);
     
-    // Check if event is within visible calendar hours
+    // Prüfen, ob der Termin innerhalb der sichtbaren Kalenderstunden liegt
     if (endHour < START_HOUR || startHour >= END_HOUR) {
-        return; // Event outside visible hours
+        return; // Termin außerhalb der sichtbaren Stunden
     }
     
-    // Clamp times to visible range
+    // Zeiten auf den sichtbaren Bereich begrenzen
     const clampedStartHour = Math.max(startHour, START_HOUR);
     const clampedStartMinute = startHour < START_HOUR ? 0 : startMinute;
     const clampedEndHour = Math.min(endHour, END_HOUR);
     const clampedEndMinute = endHour >= END_HOUR ? 0 : endMinute;
     
-    // Calculate position and height
+    // Position und Höhe berechnen
     const startFraction = (clampedStartHour - START_HOUR) + (clampedStartMinute / 60);
     const endFraction = (clampedEndHour - START_HOUR) + (clampedEndMinute / 60);
     
@@ -637,10 +637,10 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
     const topPosition = headerHeight + (startFraction * HOUR_HEIGHT);
     const eventHeight = (endFraction - startFraction) * HOUR_HEIGHT;
     
-    // Calculate left position based on position in group
+    // Linke Position basierend auf der Position in der Gruppe berechnen
     const leftPosition = EVENT_PADDING + (eventWidth * positionIndex);
     
-    // Create event block element
+    // Terminblock-Element erstellen
     const cat = getCategoryById(event.category_id);
     const eventBlock = document.createElement('div');
     eventBlock.className = 'event-block timed-event';
@@ -650,7 +650,7 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
     eventBlock.style.left = `${leftPosition}%`;
     eventBlock.style.width = `${eventWidth}%`;
     
-    // Add event content
+    // Termininhalt hinzufügen
     const timeStr = `${event.start_time}-${event.end_time}`;
     const employerNames = getEmployerNames(event);
     eventBlock.innerHTML = `
@@ -659,10 +659,10 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
         ${employerNames ? `<div class="event-employers">${employerNames}</div>` : ''}
     `;
     
-    // Add tooltip with employee info
+    // Tooltip mit Mitarbeiterinformationen hinzufügen
     addTooltipToEvent(eventBlock, event);
     
-    // Add edit click handler if user can edit this event
+    // Klick-Handler zum Bearbeiten hinzufügen, wenn der Benutzer diesen Termin bearbeiten darf
     if (canEditEvent(event)) {
         eventBlock.classList.add('editable-event');
         eventBlock.addEventListener('click', (e) => {
@@ -674,7 +674,7 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
     dayColumn.appendChild(eventBlock);
 }
 
-// Return a comma-separated string of employer names for an event
+// Einen kommagetrennten String der Mitarbeiternamen für einen Termin zurückgeben
 function getEmployerNames(event) {
     if (Array.isArray(event.employer_ids) && event.employer_ids.length > 0) {
         return event.employer_ids.map(id => {
@@ -686,7 +686,7 @@ function getEmployerNames(event) {
     return employer ? employer.name : (event.employer_name || '');
 }
 
-// Add tooltip to event block with employee info
+// Tooltip mit Mitarbeiterinformationen zum Terminblock hinzufügen
 function addTooltipToEvent(eventBlock, event) {
     let tooltip = null;
     
@@ -701,26 +701,26 @@ function addTooltipToEvent(eventBlock, event) {
             timeInfo = `${event.start_time} - ${event.end_time}`;
         }
         
-        // Include employee name(s) in tooltip (look up from loaded employers list)
+        // Mitarbeiternamen in den Tooltip aufnehmen (aus der geladenen Mitarbeiterliste nachschlagen)
         const employerNames = getEmployerNames(event);
         const employeeInfo = employerNames ? `\nMitarbeiter: ${employerNames}` : '';
         const cat = getCategoryById(event.category_id);
         const tooltipText = `${event.title || cat.name}\n${timeInfo}\nKategorie: ${cat.name}${employeeInfo}`;
         
-        // Create tooltip
+        // Tooltip erstellen
         tooltip = document.createElement('div');
         tooltip.className = 'event-tooltip';
         tooltip.style.whiteSpace = 'pre-line';
         tooltip.textContent = tooltipText;
         document.body.appendChild(tooltip);
         
-        // Position tooltip near the cursor
+        // Tooltip in der Nähe des Mauszeigers positionieren
         const rect = eventBlock.getBoundingClientRect();
         tooltip.style.left = `${rect.left + rect.width / 2}px`;
         tooltip.style.top = `${rect.top - 10}px`;
         tooltip.style.transform = 'translate(-50%, -100%)';
         
-        // Show tooltip after a brief delay
+        // Tooltip nach einer kurzen Verzögerung anzeigen
         setTimeout(() => {
             if (tooltip) {
                 tooltip.classList.add('show');
@@ -736,19 +736,19 @@ function addTooltipToEvent(eventBlock, event) {
     });
 }
 
-// Check if the current user can edit a given event
+// Prüfen, ob der aktuelle Benutzer einen bestimmten Termin bearbeiten darf
 function canEditEvent(event) {
     if (IS_SUPERUSER) return true;
     if (CURRENT_USER_ID === null || CURRENT_USER_ID === undefined) return false;
     return String(event.user_id) === String(CURRENT_USER_ID);
 }
 
-// Open the event edit modal for a given event
+// Das Termin-Bearbeitungsmodal für einen bestimmten Termin öffnen
 function openEditModal(event) {
     const modal = document.getElementById('eventEditModal');
     if (!modal) return;
 
-    // Populate category dropdown
+    // Kategorie-Dropdown füllen
     const categorySelect = document.getElementById('editEventCategory');
     categorySelect.innerHTML = '';
     categories.forEach(cat => {
@@ -759,7 +759,7 @@ function openEditModal(event) {
     });
     categorySelect.value = event.category_id || 0;
 
-    // Populate fields
+    // Felder füllen
     document.getElementById('editEventId').value = event.id;
     document.getElementById('editEventDate').value = event.date || '';
     document.getElementById('editEventDateTo').value = event.date_to || event.date || '';
@@ -772,13 +772,13 @@ function openEditModal(event) {
     modal.style.display = 'flex';
 }
 
-// Close the event edit modal
+// Termin-Bearbeitungsmodal schließen
 function closeEditModal() {
     const modal = document.getElementById('eventEditModal');
     if (modal) modal.style.display = 'none';
 }
 
-// Toggle time input fields based on all-day checkbox
+// Zeiteingabefelder basierend auf der Ganztags-Checkbox ein-/ausblenden
 function toggleTimeFields(show) {
     const timeFields = document.getElementById('editEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
@@ -786,7 +786,7 @@ function toggleTimeFields(show) {
     if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
-// Delete the event currently shown in the modal
+// Den aktuell im Modal angezeigten Termin löschen
 async function deleteEventFromModal() {
     const id = document.getElementById('editEventId').value;
 
@@ -820,7 +820,7 @@ async function deleteEventFromModal() {
         return;
     }
 
-    // Remove the event from the local events array
+    // Den Termin aus dem lokalen events-Array entfernen
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {
         events.splice(eventIndex, 1);
@@ -828,12 +828,12 @@ async function deleteEventFromModal() {
 
     closeEditModal();
 
-    // Re-render events
+    // Termine neu rendern
     document.querySelectorAll('.event-block').forEach(el => el.remove());
     renderEvents();
 }
 
-// Save changes from the edit modal via AJAX and re-render
+// Änderungen aus dem Bearbeitungsmodal per AJAX speichern und neu rendern
 async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
     const date = document.getElementById('editEventDate').value;
@@ -892,7 +892,7 @@ async function saveEventFromModal() {
         return;
     }
 
-    // Update the event in the local events array
+    // Den Termin im lokalen events-Array aktualisieren
     const monday = getMondayOfWeek(currentDate);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
@@ -902,10 +902,10 @@ async function saveEventFromModal() {
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {
         const effectiveDateTo = dateTo || date;
-        // Event is still in the current week if its date range overlaps the week
+        // Der Termin ist weiterhin in der aktuellen Woche, wenn sein Datumsbereich die Woche überlappt
         const stillInWeek = date <= sundayStr && effectiveDateTo >= mondayStr;
         if (!stillInWeek) {
-            // Event moved outside current week – remove from view
+            // Der Termin wurde aus der aktuellen Woche verschoben – aus der Ansicht entfernen
             events.splice(eventIndex, 1);
         } else {
             events[eventIndex] = {
@@ -923,17 +923,17 @@ async function saveEventFromModal() {
 
     closeEditModal();
 
-    // Re-render events
+    // Termine neu rendern
     document.querySelectorAll('.event-block').forEach(el => el.remove());
     renderEvents();
 }
 
-// Open the new event modal
+// Das neue Termin-Modal öffnen
 function openNewEventModal() {
     const modal = document.getElementById('newEventModal');
     if (!modal) return;
 
-    // Populate employer dropdown
+    // Mitarbeiter-Dropdown füllen
     const employerSelect = document.getElementById('newEventEmployer');
     employerSelect.innerHTML = '';
     employers.forEach(emp => {
@@ -943,7 +943,7 @@ function openNewEventModal() {
         employerSelect.appendChild(option);
     });
 
-    // Populate category dropdown
+    // Kategorie-Dropdown füllen
     const categorySelect = document.getElementById('newEventCategory');
     categorySelect.innerHTML = '';
     categories.forEach(cat => {
@@ -953,7 +953,7 @@ function openNewEventModal() {
         categorySelect.appendChild(option);
     });
 
-    // Pre-fill date with the current week's Monday
+    // Datum mit dem Montag der aktuellen Woche vorausfüllen
     const monday = getMondayOfWeek(currentDate);
     document.getElementById('newEventDate').value = formatDateForAPI(monday);
     document.getElementById('newEventDateTo').value = formatDateForAPI(monday);
@@ -966,13 +966,13 @@ function openNewEventModal() {
     modal.style.display = 'flex';
 }
 
-// Close the new event modal
+// Das neue Termin-Modal schließen
 function closeNewEventModal() {
     const modal = document.getElementById('newEventModal');
     if (modal) modal.style.display = 'none';
 }
 
-// Toggle time input fields in the new event modal
+// Zeiteingabefelder im neuen Termin-Modal ein-/ausblenden
 function toggleNewEventTimeFields(show) {
     const timeFields = document.getElementById('newEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
@@ -980,7 +980,7 @@ function toggleNewEventTimeFields(show) {
     if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
-// Create a new event via event_week_ajax.php
+// Einen neuen Termin über event_week_ajax.php erstellen
 async function createEventFromModal() {
     const employerSelect = document.getElementById('newEventEmployer');
     const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
@@ -1044,7 +1044,7 @@ async function createEventFromModal() {
             return;
         }
 
-        // Add new event to local array if it overlaps the current week
+        // Neuen Termin zum lokalen Array hinzufügen, wenn er die aktuelle Woche überlappt
         if (result.event) {
             const monday = getMondayOfWeek(currentDate);
             const sunday = new Date(monday);
@@ -1069,7 +1069,7 @@ async function createEventFromModal() {
     closeNewEventModal();
 }
 
-// Wire up modal events after the DOM is ready
+// Modal-Ereignisse verbinden, nachdem das DOM bereit ist
 document.addEventListener('DOMContentLoaded', () => {
     const allDayCheckbox = document.getElementById('editEventIsAllDay');
     if (allDayCheckbox) {
@@ -1090,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('editModalSave');
     if (saveBtn) saveBtn.addEventListener('click', saveEventFromModal);
 
-    // Close modal when clicking the backdrop
+    // Modal schließen, wenn auf den Hintergrund geklickt wird
     const modal = document.getElementById('eventEditModal');
     if (modal) {
         modal.addEventListener('click', (e) => {
@@ -1098,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // New Event modal controls
+    // Steuerelemente für das neue Termin-Modal
     const newEventAllDay = document.getElementById('newEventIsAllDay');
     if (newEventAllDay) {
         newEventAllDay.addEventListener('change', () => {

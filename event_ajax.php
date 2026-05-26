@@ -1,21 +1,21 @@
 <?php
 header('Content-Type: application/json');
 
-// NOTE: This is sample code for demonstration purposes.
-// In a production environment, you should:
-// 1. Add authentication to verify the user is logged in
-// 2. Add authorization to ensure users can only see events they have permission to view
-// 3. Retrieve data from a secure database instead of hardcoded arrays
-// 4. Validate and sanitize any input parameters (e.g., date filters)
+// HINWEIS: Dies ist Beispielcode zu Demonstrationszwecken.
+// In einer Produktionsumgebung solltest du:
+// 1. Authentifizierung hinzufügen, um zu prüfen, ob der Benutzer angemeldet ist
+// 2. Autorisierung hinzufügen, um sicherzustellen, dass Benutzer nur Termine sehen, die sie sehen dürfen
+// 3. Daten aus einer sicheren Datenbank statt aus fest codierten Arrays abrufen
+// 4. Alle Eingabeparameter validieren und bereinigen (z. B. Datumsfilter)
 
-// Handle DELETE action via POST
+// DELETE-Aktion per POST verarbeiten
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
 
     if ($action === 'delete') {
         $eventId = isset($_POST['event_id']) ? $_POST['event_id'] : '';
 
-        // Validate that event_id is a positive integer
+        // Prüfen, ob event_id eine positive Ganzzahl ist
         if (filter_var($eventId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Ungültige Termin-ID.']);
@@ -24,10 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $eventId = (int)$eventId;
 
-        // NOTE: In production, verify that the current session user is either the creator
-        // of the event (event.user_id == session user id) or a superuser before proceeding.
-        // Then mark the record as deleted in the database (e.g. SET deleted = 1 WHERE id = $eventId).
-        // For now, we simply return success since the events are a hardcoded in-memory array.
+        // HINWEIS: In der Produktion prüfen, ob der aktuelle Session-Benutzer entweder der Ersteller ist
+        // des Termins (event.user_id == ID des Session-Benutzers) oder ein Superuser ist, bevor fortgefahren wird.
+        // Dann den Datensatz in der Datenbank als gelöscht markieren (z. B. SET deleted = 1 WHERE id = $eventId).
+        // Vorerst geben wir einfach Erfolg zurück, da die Termine in einem fest codierten In-Memory-Array liegen.
 
         echo json_encode(['success' => true]);
         exit;
@@ -40,21 +40,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $requestedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
-// Validate date format (YYYY-MM-DD)
+// Datumsformat validieren (YYYY-MM-DD)
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedDate)) {
     $requestedDate = date('Y-m-d');
 }
 
-// Verify it's a valid date
+// Prüfen, ob es ein gültiges Datum ist
 $dateTime = DateTime::createFromFormat('Y-m-d', $requestedDate);
 if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
     $requestedDate = date('Y-m-d');
 }
 
-// Sample event data for employees
-// In a real application, this would come from a database
-// Structure: id, employer_id, user_id, date, start_time, end_time, category, color, is_all_day, title
-// user_id identifies the user who created the event
+// Beispiel-Termindaten für Mitarbeiter
+// In einer echten Anwendung würden diese aus einer Datenbank kommen
+// Struktur: id, employer_id, user_id, date, start_time, end_time, category, color, is_all_day, title
+// user_id kennzeichnet den Benutzer, der den Termin erstellt hat
 
 $events = [
     // Max Mustermann (employer_id: 1)
@@ -258,12 +258,12 @@ $events = [
     ]
 ];
 
-// Filter events by requested date
+// Termine nach dem angeforderten Datum filtern
 $filteredEvents = array_filter($events, function($event) use ($requestedDate) {
     return $event['date'] === $requestedDate;
 });
 
-// Re-index the array to ensure proper JSON encoding
+// Das Array neu indizieren, um eine korrekte JSON-Codierung sicherzustellen
 $filteredEvents = array_values($filteredEvents);
 
 echo json_encode($filteredEvents);

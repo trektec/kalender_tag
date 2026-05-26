@@ -11,7 +11,7 @@ header('Content-Type: application/json');
 //   in einer Datenbank gespeichert.
 //
 // PRODUKTIONSMODUS:
-//   1. Datenbank anlegen und das CREATE TABLE-Statement aus
+//   1. Datenbank anlegen und die CREATE TABLE-Anweisung aus
 //      event_iec_db.php einmalig ausführen.
 //   2. DB_HOST, DB_USER, DB_PASS und DB_NAME in event_iec_db.php
 //      auf deine Zugangsdaten anpassen.
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ----------------------------------------------------------
     if ($action === 'create') {
         // --- Pflichtfelder validieren ---
-        // Accept employer_ids[] array (multi-employer) or fall back to single employer_id
+        // Das employer_ids[]-Array akzeptieren (mehrere Mitarbeiter) oder auf eine einzelne employer_id zurückfallen
         $employerIdsRaw = isset($_POST['employer_ids']) && is_array($_POST['employer_ids'])
             ? $_POST['employer_ids']
             : (isset($_POST['employer_id']) ? [$_POST['employer_id']] : []);
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Ungültige oder fehlende Mitarbeiter-ID(s).']);
             exit;
         }
-        $employerId = $employerIds[0]; // primary employer for backward compatibility
+        $employerId = $employerIds[0]; // Primärer Mitarbeiter für Rückwärtskompatibilität
 
         $userId     = isset($_POST['user_id'])     ? $_POST['user_id']     : '1';
         $date       = isset($_POST['date'])        ? trim($_POST['date'])  : '';
@@ -101,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime   = '';
         }
 
-        // Validate and normalize date_to: must be >= date; defaults to date if empty
+        // date_to validieren und normalisieren: muss >= date sein; standardmäßig date, wenn leer
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
             $dateTo = $date;
         } else {
@@ -191,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime   = '';
         }
 
-        // Validate and normalize date_to: must be >= date; defaults to date if empty
+        // date_to validieren und normalisieren: muss >= date sein; standardmäßig date, wenn leer
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
             $dateTo = $date;
         } else {
@@ -248,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ============================================================
 $requestedDate = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 
-// Validate date format (YYYY-MM-DD)
+// Datumsformat validieren (YYYY-MM-DD)
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedDate)) {
     $requestedDate = date('Y-m-d');
 }
@@ -373,7 +373,7 @@ $events = [
     ],
 ];
 
-// Filter events by requested date: include events whose date range covers the requested date
+// Termine nach dem angeforderten Datum filtern: include events whose date range covers the requested date
 $filteredEvents = array_filter($events, function ($event) use ($requestedDate) {
     $dateTo = isset($event['date_to']) && $event['date_to'] !== '' ? $event['date_to'] : $event['date'];
     return $event['date'] <= $requestedDate && $dateTo >= $requestedDate;

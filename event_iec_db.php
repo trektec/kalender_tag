@@ -28,6 +28,7 @@
 //        category     VARCHAR(100)    NOT NULL DEFAULT '',
 //        color        VARCHAR(7)      NOT NULL DEFAULT '#4a90e2',
 //        is_all_day   TINYINT(1)      NOT NULL DEFAULT 0,
+//        show_marker  TINYINT(1)      NOT NULL DEFAULT 0,
 //        title        VARCHAR(255)    NOT NULL DEFAULT '',
 //        deleted      TINYINT(1)      NOT NULL DEFAULT 0,
 //        created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -47,6 +48,8 @@
 //
 //    Um date_to zu einer bestehenden Tabelle hinzuzufügen:
 //      ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
+//    Um show_marker zu einer bestehenden Tabelle hinzuzufügen:
+//      ALTER TABLE events ADD COLUMN show_marker TINYINT(1) NOT NULL DEFAULT 0 AFTER is_all_day;
 //
 // 2. ZUGANGSDATEN EINTRAGEN
 //    Passe die vier Konstanten DB_HOST, DB_USER, DB_PASS und

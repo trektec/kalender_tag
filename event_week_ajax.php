@@ -26,6 +26,7 @@ define('DB_PORT', 3306);
 //     end_time     TIME            NULL,
 //     category_id  INT UNSIGNED    NOT NULL DEFAULT 0,
 //     is_all_day   TINYINT(1)      NOT NULL DEFAULT 0,
+//     show_marker  TINYINT(1)      NOT NULL DEFAULT 0,
 //     title        VARCHAR(255)    NOT NULL DEFAULT '',
 //     deleted      TINYINT(1)      NOT NULL DEFAULT 0,
 //     created_at   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -45,6 +46,8 @@ define('DB_PORT', 3306);
 //
 // Um date_to zu einer bestehenden Tabelle hinzuzufügen:
 //   ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
+// Um show_marker zu einer bestehenden Tabelle hinzuzufügen:
+//   ALTER TABLE events ADD COLUMN show_marker TINYINT(1) NOT NULL DEFAULT 0 AFTER is_all_day;
 //
 // Um von category+color zu category_id zu migrieren:
 //   ALTER TABLE events
@@ -85,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title      = isset($_POST['title'])         ? trim($_POST['title'])  : '';
         $categoryId = isset($_POST['category_id'])   ? $_POST['category_id'] : '0';
         $isAllDay   = isset($_POST['is_all_day'])    ? (bool)$_POST['is_all_day'] : false;
+        $showMarker = isset($_POST['show_marker'])   ? (bool)$_POST['show_marker'] : false;
         $startTime  = isset($_POST['start_time'])    ? trim($_POST['start_time']) : '';
         $endTime    = isset($_POST['end_time'])      ? trim($_POST['end_time'])   : '';
         $dateTo     = isset($_POST['date_to'])       ? trim($_POST['date_to'])    : '';
@@ -134,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId      = filter_var($userId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false
                        ? (int)$userId : 1;
         $isAllDayInt = $isAllDay ? 1 : 0;
+        $showMarkerInt = $showMarker ? 1 : 0;
 
         $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
         if ($conn->connect_error) {
@@ -146,11 +151,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $conn->prepare(
             'INSERT INTO events
                  (employer_id, user_id, date, date_to, start_time, end_time,
-                  category_id, is_all_day, title)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                  category_id, is_all_day, show_marker, title)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->bind_param(
-            'iisssssis',
+            'iissssiiss',
             $employerId,
             $userId,
             $date,
@@ -159,6 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime,
             $categoryId,
             $isAllDayInt,
+            $showMarkerInt,
             $title
         );
         $stmt->execute();
@@ -185,6 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'end_time'     => $endTime   ?? '',
             'category_id'  => $categoryId,
             'is_all_day'   => $isAllDay,
+            'show_marker'  => $showMarker,
             'title'        => $title,
         ];
 
@@ -201,6 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title      = isset($_POST['title'])        ? trim($_POST['title'])      : '';
         $categoryId = isset($_POST['category_id'])  ? $_POST['category_id']     : '0';
         $isAllDay   = isset($_POST['is_all_day'])   ? (bool)$_POST['is_all_day'] : false;
+        $showMarker = isset($_POST['show_marker'])  ? (bool)$_POST['show_marker'] : false;
         $startTime  = isset($_POST['start_time'])   ? trim($_POST['start_time']) : '';
         $endTime    = isset($_POST['end_time'])     ? trim($_POST['end_time'])   : '';
         $dateTo     = isset($_POST['date_to'])      ? trim($_POST['date_to'])    : '';
@@ -255,6 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $eventId     = (int)$eventId;
         $isAllDayInt = $isAllDay ? 1 : 0;
+        $showMarkerInt = $showMarker ? 1 : 0;
 
         $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
         if ($conn->connect_error) {
@@ -272,17 +281,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     end_time    = ?,
                     category_id = ?,
                     is_all_day  = ?,
+                    show_marker = ?,
                     title       = ?
              WHERE  id = ? AND deleted = 0'
         );
         $stmt->bind_param(
-            'ssssisi',
+            'ssssiisi',
             $date,
             $dateTo,
             $startTime,
             $endTime,
             $categoryId,
             $isAllDayInt,
+            $showMarkerInt,
             $title,
             $eventId
         );
@@ -365,7 +376,7 @@ $stmt = $conn->prepare(
             DATE_FORMAT(e.date_to, \'%Y-%m-%d\') AS date_to,
             IFNULL(TIME_FORMAT(e.start_time, \'%H:%i\'), \'\') AS start_time,
             IFNULL(TIME_FORMAT(e.end_time,   \'%H:%i\'), \'\') AS end_time,
-            e.category_id, e.is_all_day, e.title,
+            e.category_id, e.is_all_day, e.show_marker, e.title,
             GROUP_CONCAT(DISTINCT ee.employer_id ORDER BY ee.employer_id) AS employer_ids_str
      FROM   events e
      LEFT JOIN event_employers ee ON ee.event_id = e.id
@@ -385,6 +396,7 @@ while ($row = $result->fetch_assoc()) {
     $row['user_id']      = (int)$row['user_id'];
     $row['category_id']  = (int)$row['category_id'];
     $row['is_all_day']   = (bool)$row['is_all_day'];
+    $row['show_marker']  = (bool)$row['show_marker'];
     // date_to normalisieren: auf date zurückfallen, wenn nicht gesetzt
     $row['date_to']      = $row['date_to'] ?? $row['date'];
     // employer_ids aus dem GROUP_CONCAT-Ergebnis parsen; auf employer_id des primären Mitarbeiters zurückfallen

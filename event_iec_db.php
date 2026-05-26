@@ -14,7 +14,7 @@
 // ============================================================
 //
 // 1. DATENBANK ANLEGEN
-//    Führe das folgende SQL-Statement einmalig in deiner
+//    Führe die folgende SQL-Anweisung einmalig in deiner
 //    MySQL-/MariaDB-Datenbank aus, um die Tabelle zu erstellen:
 //
 //    CREATE TABLE IF NOT EXISTS events (
@@ -37,7 +37,7 @@
 //        INDEX idx_employer (employer_id)
 //    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 //
-//    -- Junction table for many-to-many event-employer assignments:
+//    -- Verknüpfungstabelle für viele-zu-viele-Zuweisungen zwischen Terminen und Mitarbeitern:
 //    CREATE TABLE IF NOT EXISTS event_employers (
 //        event_id     INT UNSIGNED NOT NULL,
 //        employer_id  INT UNSIGNED NOT NULL,
@@ -45,7 +45,7 @@
 //        INDEX idx_ee_employer (employer_id)
 //    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 //
-//    To add date_to to an existing table:
+//    Um date_to zu einer bestehenden Tabelle hinzuzufügen:
 //      ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
 //
 // 2. ZUGANGSDATEN EINTRAGEN
@@ -128,7 +128,7 @@ function dbGetEvents(string $date): array
 {
     $conn = getDbConnection();
 
-    // Increase GROUP_CONCAT limit to avoid truncation when many employers are assigned to an event
+    // GROUP_CONCAT-Limit erhöhen, um Abschneidungen zu vermeiden, wenn vielen Mitarbeitern ein Termin zugewiesen ist
     $conn->query('SET SESSION group_concat_max_len = 65536');
 
     // Alle aktiven Termine laden, die das gewünschte Datum abdecken
@@ -160,9 +160,9 @@ function dbGetEvents(string $date): array
         $row['employer_id'] = (int)$row['employer_id'];
         $row['user_id']     = (int)$row['user_id'];
         $row['is_all_day']  = (bool)$row['is_all_day'];
-        // Normalize date_to: fall back to date if not set
+        // date_to normalisieren: auf date zurückfallen, wenn nicht gesetzt
         $row['date_to']     = $row['date_to'] ?? $row['date'];
-        // Parse employer_ids from GROUP_CONCAT result; fall back to primary employer_id
+        // employer_ids aus dem GROUP_CONCAT-Ergebnis parsen; auf employer_id des primären Mitarbeiters zurückfallen
         $row['employer_ids'] = $row['employer_ids_str'] !== null
             ? array_map('intval', explode(',', $row['employer_ids_str']))
             : [$row['employer_id']];
@@ -332,7 +332,7 @@ function dbUpdateEvent(int $id, array $data): bool
 }
 
 // ============================================================
-// Einen Termin als gelöscht markieren (Soft-Delete: deleted = 1).
+// Einen Termin als gelöscht markieren (logisches Löschen: deleted = 1).
 // Der Datensatz bleibt in der Datenbank erhalten, wird aber nicht
 // mehr angezeigt.  So lässt er sich bei Bedarf wiederherstellen.
 //

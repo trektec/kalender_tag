@@ -4,15 +4,15 @@ header('Content-Type: application/json');
 // event_iec_db.php wird nur für die Datenbankverbindung (getDbConnection) benötigt.
 require_once 'event_iec_db.php';
 
-// Get date parameter from query string, default to today
+// Datumsparameter aus dem Query-String holen, standardmäßig heute
 $requestedDate = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 
-// Validate date format (YYYY-MM-DD)
+// Datumsformat validieren (YYYY-MM-DD)
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $requestedDate)) {
     $requestedDate = date('Y-m-d');
 }
 
-// Verify it's a valid date
+// Prüfen, ob es ein gültiges Datum ist
 $dateTime = DateTime::createFromFormat('Y-m-d', $requestedDate);
 if (!$dateTime || $dateTime->format('Y-m-d') !== $requestedDate) {
     $requestedDate = date('Y-m-d');
@@ -55,7 +55,7 @@ try {
         throw new RuntimeException('Datenbankabfrage fehlgeschlagen: ' . $conn->error);
     }
 
-    // Einträge nach Nutzer gruppieren und in Logins / Logouts aufteilen
+    // Einträge nach Benutzer gruppieren und in Logins / Logouts aufteilen
     $logins  = [];   // $logins[$user_id]  = [[id, time], ...]
     $logouts = [];   // $logouts[$user_id] = [time, ...]
 

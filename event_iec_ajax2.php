@@ -2,9 +2,9 @@
 header('Content-Type: application/json');
 
 // ============================================================
-// event_iec_ajax2.php – AJAX endpoint + DB layer in one file
+// event_iec_ajax2.php – AJAX-Endpunkt + DB-Schicht in einer Datei
 // ============================================================
-// Adjust these values to match your MySQL/MariaDB setup.
+// Passe diese Werte an deine MySQL-/MariaDB-Konfiguration an.
 // ============================================================
 
 define('DB_HOST', 'localhost');
@@ -14,7 +14,7 @@ define('DB_NAME', 'your_db_name');
 define('DB_PORT', 3306);
 
 // ============================================================
-// Required table structure – run once on your database:
+// Erforderliche Tabellenstruktur – einmal auf deiner Datenbank ausführen:
 //
 // CREATE TABLE IF NOT EXISTS events (
 //     id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -35,7 +35,7 @@ define('DB_PORT', 3306);
 //     INDEX idx_employer (employer_id)
 // ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 //
-// -- Junction table for many-to-many event-employer assignments:
+// -- Verknüpfungstabelle für viele-zu-viele-Zuweisungen zwischen Terminen und Mitarbeitern:
 // CREATE TABLE IF NOT EXISTS event_employers (
 //     event_id     INT UNSIGNED NOT NULL,
 //     employer_id  INT UNSIGNED NOT NULL,
@@ -43,10 +43,10 @@ define('DB_PORT', 3306);
 //     INDEX idx_ee_employer (employer_id)
 // ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 //
-// To add date_to to an existing table:
+// Um date_to zu einer bestehenden Tabelle hinzuzufügen:
 //   ALTER TABLE events ADD COLUMN date_to DATE NULL DEFAULT NULL AFTER date;
 //
-// To migrate from category+color to category_id:
+// Um von category+color zu category_id zu migrieren:
 //   ALTER TABLE events
 //     ADD COLUMN category_id INT UNSIGNED NOT NULL DEFAULT 0 AFTER end_time,
 //     DROP COLUMN category,
@@ -54,16 +54,16 @@ define('DB_PORT', 3306);
 // ============================================================
 
 // ============================================================
-// POST – write actions (create / edit / delete)
+// POST – Schreibaktionen (Erstellen / Bearbeiten / Löschen)
 // ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? trim($_POST['action']) : '';
 
     // ----------------------------------------------------------
-    // CREATE a new event
+    // Einen neuen Termin ERSTELLEN
     // ----------------------------------------------------------
     if ($action === 'create') {
-        // Accept employer_ids[] array (multi-employer) or fall back to single employer_id
+        // Das employer_ids[]-Array akzeptieren (mehrere Mitarbeiter) oder auf eine einzelne employer_id zurückfallen
         $employerIdsRaw = isset($_POST['employer_ids']) && is_array($_POST['employer_ids'])
             ? $_POST['employer_ids']
             : (isset($_POST['employer_id']) ? [$_POST['employer_id']] : []);
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => false, 'message' => 'Ungültige oder fehlende Mitarbeiter-ID(s).']);
             exit;
         }
-        $employerId = $employerIds[0]; // primary employer for backward compatibility
+        $employerId = $employerIds[0]; // Primärer Mitarbeiter für Rückwärtskompatibilität
 
         $userId     = isset($_POST['user_id'])      ? $_POST['user_id']      : '1';
         $date       = isset($_POST['date'])          ? trim($_POST['date'])   : '';
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime   = null;
         }
 
-        // Validate and normalize date_to: must be >= date; defaults to date if empty
+        // date_to validieren und normalisieren: muss >= date sein; standardmäßig date, wenn leer
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
             $dateTo = $date;
         } else {
@@ -165,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newId = (int)$conn->insert_id;
         $stmt->close();
 
-        // Insert all employer assignments into the event_employers junction table
+        // Alle Mitarbeiterzuweisungen in die Verknüpfungstabelle event_employers einfügen
         $stmtEmp = $conn->prepare('INSERT IGNORE INTO event_employers (event_id, employer_id) VALUES (?, ?)');
         foreach ($employerIds as $eid) {
             $stmtEmp->bind_param('ii', $newId, $eid);
@@ -193,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ----------------------------------------------------------
-    // EDIT (update) an existing event
+    // Einen bestehenden Termin BEARBEITEN (aktualisieren)
     // ----------------------------------------------------------
     if ($action === 'edit') {
         $eventId    = isset($_POST['event_id'])    ? $_POST['event_id']         : '';
@@ -243,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $endTime   = null;
         }
 
-        // Validate and normalize date_to: must be >= date; defaults to date if empty
+        // date_to validieren und normalisieren: muss >= date sein; standardmäßig date, wenn leer
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
             $dateTo = $date;
         } else {
@@ -295,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ----------------------------------------------------------
-    // DELETE an event (soft-delete: sets deleted = 1)
+    // Einen Termin LÖSCHEN (logisches Löschen: setzt deleted = 1)
     // ----------------------------------------------------------
     if ($action === 'delete') {
         $eventId = isset($_POST['event_id']) ? $_POST['event_id'] : '';
@@ -334,7 +334,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ============================================================
-// GET – return events for the requested date
+// GET – Termine für das angeforderte Datum zurückgeben
 // ============================================================
 $requestedDate = isset($_GET['date']) ? trim($_GET['date']) : date('Y-m-d');
 
@@ -353,7 +353,7 @@ if ($conn->connect_error) {
     exit;
 }
 $conn->set_charset('utf8mb4');
-// Increase GROUP_CONCAT limit to avoid truncation when many employers are assigned to an event
+// GROUP_CONCAT-Limit erhöhen, um Abschneidungen zu vermeiden, wenn vielen Mitarbeitern ein Termin zugewiesen ist
 $conn->query('SET SESSION group_concat_max_len = 65536');
 
 $stmt = $conn->prepare(
@@ -382,9 +382,9 @@ while ($row = $result->fetch_assoc()) {
     $row['user_id']      = (int)$row['user_id'];
     $row['category_id']  = (int)$row['category_id'];
     $row['is_all_day']   = (bool)$row['is_all_day'];
-    // Normalize date_to: fall back to date if not set
+    // date_to normalisieren: auf date zurückfallen, wenn nicht gesetzt
     $row['date_to']      = $row['date_to'] ?? $row['date'];
-    // Parse employer_ids from GROUP_CONCAT result; fall back to primary employer_id
+    // employer_ids aus dem GROUP_CONCAT-Ergebnis parsen; auf employer_id des primären Mitarbeiters zurückfallen
     $row['employer_ids'] = $row['employer_ids_str'] !== null
         ? array_map('intval', explode(',', $row['employer_ids_str']))
         : [$row['employer_id']];

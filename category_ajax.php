@@ -1,11 +1,11 @@
 <?php
 header('Content-Type: application/json');
 
-// NOTE: This is sample code for demonstration purposes.
-// In a production environment, retrieve categories from a secure database.
+// HINWEIS: Dies ist Beispielcode zu Demonstrationszwecken.
+// In einer Produktionsumgebung sollten Kategorien aus einer sicheren Datenbank abgerufen werden.
 
-// Sample category data
-// Structure: id, name, color
+// Beispiel-Kategoriedaten
+// Struktur: id, name, color
 $categories = [
     ['id' => 1, 'name' => 'Meeting',     'color' => '#4a90e2'],
     ['id' => 2, 'name' => 'Appointment', 'color' => '#e74c3c'],

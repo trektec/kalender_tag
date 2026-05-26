@@ -1,57 +1,57 @@
-// Configuration - Adjust these values to customize the calendar
+// Konfiguration - Passe diese Werte an, um den Kalender anzupassen
 const START_HOUR = 6;
 const END_HOUR = 18;
 
-// User configuration - set CURRENT_USER_ID to the ID of the logged-in user (null = not logged in)
-// Set IS_SUPERUSER to true to allow editing all events regardless of ownership
+// Benutzerkonfiguration - setze CURRENT_USER_ID auf die ID des angemeldeten Benutzers (null = nicht angemeldet)
+// Setze IS_SUPERUSER auf true, um das Bearbeiten aller Termine unabhängig vom Besitzer zu erlauben
 const CURRENT_USER_ID = null;
 const IS_SUPERUSER = false;
-const HOUR_HEIGHT = 60; // Height of each hour slot in pixels
-const ALL_DAY_HEIGHT = 60; // Minimum height of the all-day appointments section in pixels
-const ALL_DAY_EVENT_HEIGHT = 30; // Height of each individual all-day event in pixels
-const ALL_DAY_BOTTOM_SPACING = 10; // Adjustable spacing after the last all-day entry in pixels
-const COLUMN_GAP = 0; // Gap between columns in pixels
-const EMPLOYER_HEADER_HEIGHT = 40; // Height of employer name header in pixels
-const SESSION_PADDING = 5; // Padding/margin from column edges for session blocks in pixels
-const EVENT_PADDING = 2; // Padding/margin from column edges for event blocks in pixels
+const HOUR_HEIGHT = 60; // Höhe jedes Stundenfelds in Pixeln
+const ALL_DAY_HEIGHT = 60; // Mindesthöhe des Ganztagstermin-Bereichs in Pixeln
+const ALL_DAY_EVENT_HEIGHT = 30; // Höhe jedes einzelnen Ganztagstermins in Pixeln
+const ALL_DAY_BOTTOM_SPACING = 10; // Anpassbarer Abstand nach dem letzten Ganztagseintrag in Pixeln
+const COLUMN_GAP = 0; // Abstand zwischen den Spalten in Pixeln
+const EMPLOYER_HEADER_HEIGHT = 40; // Höhe der Mitarbeiterkopfzeile in Pixeln
+const SESSION_PADDING = 5; // Innen-/Außenabstand von den Spaltenrändern für Sitzungsblöcke in Pixeln
+const EVENT_PADDING = 2; // Innen-/Außenabstand von den Spaltenrändern für Terminblöcke in Pixeln
 
-// State
+// Status
 let employers = [];
 let categories = [];
 let sessions = [];
 let events = [];
-let currentAllDayHeights = null; // Cache for all-day heights
-let currentDate = new Date(); // Current selected date
+let currentAllDayHeights = null; // Cache für Ganztagshöhen
+let currentDate = new Date(); // Aktuell ausgewähltes Datum
 
-// Helper function to validate hex color format
+// Hilfsfunktion zum Validieren des Hex-Farbformats
 function isValidHexColor(color) {
     return /^#[0-9A-Fa-f]{6}$/.test(color);
 }
 
-// Helper function to calculate luminance of a color
+// Hilfsfunktion zum Berechnen der Luminanz einer Farbe
 function getLuminance(hexColor) {
-    // Convert hex to RGB
+    // Hex in RGB umwandeln
     const r = parseInt(hexColor.substring(1, 3), 16) / 255;
     const g = parseInt(hexColor.substring(3, 5), 16) / 255;
     const b = parseInt(hexColor.substring(5, 7), 16) / 255;
     
-    // Apply gamma correction
+    // Gammakorrektur anwenden
     const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
     const gsRGB = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
     const bsRGB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
     
-    // Calculate luminance
+    // Luminanz berechnen
     return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
 }
 
-// Helper function to get contrasting text color (white or black)
+// Hilfsfunktion zum Ermitteln einer kontrastierenden Textfarbe (weiß oder schwarz)
 function getContrastingTextColor(hexColor) {
     const luminance = getLuminance(hexColor);
-    // Use white text for dark backgrounds, black text for light backgrounds
+    // Verwende weißen Text für dunkle Hintergründe und schwarzen Text für helle Hintergründe
     return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
-// Initialize calendar on page load
+// Kalender beim Laden der Seite initialisieren
 document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
     updateDateDisplay();
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeTimeline();
 });
 
-// Setup navigation button handlers
+// Ereignishandler für Navigationsschaltflächen einrichten
 function setupNavigationHandlers() {
     document.getElementById('prevDayBtn').addEventListener('click', () => {
         changeDay(-1);
@@ -80,7 +80,7 @@ function setupNavigationHandlers() {
     });
 }
 
-// Change current date by days offset
+// Aktuelles Datum um einen Tagesoffset ändern
 async function changeDay(daysOffset) {
     currentDate = new Date(currentDate.getTime());
     currentDate.setDate(currentDate.getDate() + daysOffset);
@@ -88,14 +88,14 @@ async function changeDay(daysOffset) {
     await reloadCalendar();
 }
 
-// Set current date to today
+// Aktuelles Datum auf heute setzen
 async function setToday() {
     currentDate = new Date();
     updateDateDisplay();
     await reloadCalendar();
 }
 
-// Update the date display
+// Datumsanzeige aktualisieren
 function updateDateDisplay() {
     const dateDisplay = document.getElementById('currentDateDisplay');
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -103,7 +103,7 @@ function updateDateDisplay() {
     dateDisplay.textContent = dateString;
 }
 
-// Reload calendar with current date
+// Kalender mit aktuellem Datum neu laden
 async function reloadCalendar() {
     await loadEmployers();
     await loadCategories();
@@ -112,11 +112,11 @@ async function reloadCalendar() {
     renderCalendar();
     renderSessions();
     renderEvents();
-    createTimelineElement(); // Recreate timeline element after calendar is re-rendered
+    createTimelineElement(); // Zeitleisten-Element neu erstellen, nachdem der Kalender neu gerendert wurde
     updateTimeline();
 }
 
-// Format date for API calls (YYYY-MM-DD)
+// Datum für API-Aufrufe formatieren (YYYY-MM-DD)
 function formatDateForAPI(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -124,7 +124,7 @@ function formatDateForAPI(date) {
     return `${year}-${month}-${day}`;
 }
 
-// Load employers from server
+// Mitarbeiter vom Server laden
 async function loadEmployers() {
     const calendarDiv = document.getElementById('calendar');
     
@@ -147,7 +147,7 @@ async function loadEmployers() {
     } catch (error) {
         console.error('Fehler beim Laden der Mitarbeiter:', error);
         calendarDiv.innerHTML = `<div class="error">Fehler beim Laden der Mitarbeiter: ${error.message}</div>`;
-        // Use sample data for demonstration
+        // Beispieldaten zur Demonstration verwenden
         employers = [
             { id: 1, name: 'Max Mustermann', department: 'Vertrieb', color: '#4a90e2' },
             { id: 2, name: 'Anna Schmidt', department: 'Marketing', color: '#e74c3c' },
@@ -156,7 +156,7 @@ async function loadEmployers() {
     }
 }
 
-// Load categories from server
+// Kategorien vom Server laden
 async function loadCategories() {
     try {
         const response = await fetch('category_ajax.php');
@@ -174,13 +174,13 @@ async function loadCategories() {
     }
 }
 
-// Get a category object by its id (returns a default if not found)
+// Ein Kategorieobjekt anhand seiner ID abrufen (gibt einen Standardwert zurück, wenn keines gefunden wird)
 function getCategoryById(id) {
     const cat = categories.find(c => c.id === id);
     return cat || { id: 0, name: '', color: '#4a90e2' };
 }
 
-// Load sessions from server
+// Sitzungen vom Server laden
 async function loadSessions() {
     try {
         const dateParam = formatDateForAPI(currentDate);
@@ -199,7 +199,7 @@ async function loadSessions() {
     }
 }
 
-// Load events from server
+// Termine vom Server laden
 async function loadEvents() {
     try {
         const dateParam = formatDateForAPI(currentDate);
@@ -218,32 +218,32 @@ async function loadEvents() {
     }
 }
 
-// Render the complete calendar
+// Den vollständigen Kalender rendern
 function renderCalendar() {
     const calendarDiv = document.getElementById('calendar');
     calendarDiv.innerHTML = '';
     
-    // Calculate all-day section heights for each employer
+    // Die Höhe des Ganztagsbereichs für jeden Mitarbeiter berechnen
     const allDayHeights = calculateAllDayHeights();
-    currentAllDayHeights = allDayHeights; // Cache for later use
+    currentAllDayHeights = allDayHeights; // Für die spätere Verwendung zwischenspeichern
     
-    // Create left time column
+    // Linke Zeitspalte erstellen
     const timeColumnLeft = createTimeColumn(allDayHeights);
     calendarDiv.appendChild(timeColumnLeft);
     
-    // Create employer columns
+    // Mitarbeiterspalten erstellen
     employers.forEach((employer, index) => {
         const isLastEmployer = index === employers.length - 1;
         const employerColumn = createEmployerColumn(employer, isLastEmployer, allDayHeights);
         calendarDiv.appendChild(employerColumn);
     });
     
-    // Create right time column
+    // Rechte Zeitspalte erstellen
     const timeColumnRight = createTimeColumn(allDayHeights);
     calendarDiv.appendChild(timeColumnRight);
 }
 
-// Helper function to get the current header height (employer header + all-day section)
+// Hilfsfunktion zum Ermitteln der aktuellen Kopfzeilenhöhe (Mitarbeiterkopfzeile + Ganztagsbereich)
 function getHeaderHeight() {
     if (currentAllDayHeights) {
         return EMPLOYER_HEADER_HEIGHT + currentAllDayHeights.maxHeight;
@@ -251,20 +251,20 @@ function getHeaderHeight() {
     return EMPLOYER_HEADER_HEIGHT + ALL_DAY_HEIGHT;
 }
 
-// Helper: returns an array of employer ID strings for an event,
-// supporting both multi-employer (employer_ids array) and legacy single employer_id.
+// Hilfsfunktion: Gibt ein Array von Mitarbeiter-ID-Strings für einen Termin zurück,
+// die sowohl Mehrfachzuweisungen (employer_ids-Array) als auch das alte einzelne employer_id unterstützt.
 function getEmployerIds(event) {
     return Array.isArray(event.employer_ids)
         ? event.employer_ids.map(String)
         : [String(event.employer_id)];
 }
 
-// Calculate the height needed for all-day section for each employer
+// Die für den Ganztagsbereich jedes Mitarbeiters benötigte Höhe berechnen
 function calculateAllDayHeights() {
     const allDayHeights = {};
-    let maxAllDayEvents = 0; // Start with 0
+    let maxAllDayEvents = 0; // Mit 0 beginnen
 
-    // Group events by employer
+    // Termine nach Mitarbeiter gruppieren
     employers.forEach(employer => {
         const employerAllDayEvents = events.filter(e =>
             getEmployerIds(e).includes(String(employer.id)) && e.is_all_day
@@ -274,27 +274,27 @@ function calculateAllDayHeights() {
         maxAllDayEvents = Math.max(maxAllDayEvents, count);
     });
     
-    // Calculate the total height needed: each event height plus bottom spacing,
-    // with a minimum of ALL_DAY_HEIGHT so the section is never too small
+    // Die benötigte Gesamthöhe berechnen: jede Terminhöhe plus Abstand unten,
+    // mit einem Minimum von ALL_DAY_HEIGHT, damit der Bereich nie zu klein ist
     const calculatedHeight = (maxAllDayEvents * ALL_DAY_EVENT_HEIGHT) + ALL_DAY_BOTTOM_SPACING;
     const maxHeight = Math.max(ALL_DAY_HEIGHT, calculatedHeight);
     
     return { perEmployer: allDayHeights, maxHeight: maxHeight };
 }
 
-// Create time column with hours
+// Zeitspalte mit Stunden erstellen
 function createTimeColumn(allDayHeights) {
     const column = document.createElement('div');
     column.className = 'time-column';
     
-    // Header (must match employer header + all-day section height)
+    // Kopfzeile (muss zur Mitarbeiterkopfzeile + Höhe des Ganztagsbereichs passen)
     const header = document.createElement('div');
     header.className = 'time-header';
     header.style.height = `${EMPLOYER_HEADER_HEIGHT + allDayHeights.maxHeight}px`;
     header.textContent = 'Zeit';
     column.appendChild(header);
     
-    // Hours
+    // Stunden
     for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
         const timeSlot = document.createElement('div');
         timeSlot.className = 'time-slot';
@@ -306,38 +306,38 @@ function createTimeColumn(allDayHeights) {
     return column;
 }
 
-// Create employer column with all-day section and hours
+// Mitarbeiterspalte mit Ganztagsbereich und Stunden erstellen
 function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
     const column = document.createElement('div');
     column.className = 'employer-column';
     column.dataset.employerId = employer.id;
     
-    // Apply column gap via margin, but not for the last employer
+    // Spaltenabstand per Margin anwenden, aber nicht für den letzten Mitarbeiter
     if (COLUMN_GAP > 0 && !isLastEmployer) {
         column.style.marginRight = `${COLUMN_GAP}px`;
     }
     
-    // Employer name header
+    // Kopfzeile mit Mitarbeiternamen
     const header = document.createElement('div');
     header.className = 'employer-header';
     header.style.height = `${EMPLOYER_HEADER_HEIGHT}px`;
     header.textContent = employer.name;
-    // Apply employer color if available and valid
+    // Mitarbeiterfarbe anwenden, wenn vorhanden und gültig
     if (employer.color && isValidHexColor(employer.color)) {
         header.style.backgroundColor = employer.color;
-        // Set contrasting text color for accessibility
+        // Kontrastierende Textfarbe für bessere Zugänglichkeit setzen
         header.style.color = getContrastingTextColor(employer.color);
     }
     column.appendChild(header);
     
-    // All-day section (use max height across all employers)
+    // Ganztagsbereich (maximale Höhe über alle Mitarbeiter verwenden)
     const allDaySection = document.createElement('div');
     allDaySection.className = 'all-day-section';
     allDaySection.style.height = `${allDayHeights.maxHeight}px`;
-    // Don't set any default text - leave empty when no all-day events
+    // Keinen Standardtext setzen - leer lassen, wenn keine Ganztagstermine vorhanden sind
     column.appendChild(allDaySection);
     
-    // Hour slots
+    // Stundenfelder
     for (let hour = START_HOUR; hour <= END_HOUR; hour++) {
         const hourSlot = document.createElement('div');
         hourSlot.className = 'hour-slot';
@@ -349,11 +349,11 @@ function createEmployerColumn(employer, isLastEmployer = false, allDayHeights) {
     return column;
 }
 
-// Timeline functionality
+// Zeitleistenfunktionalität
 function initializeTimeline() {
     createTimelineElement();
     updateTimeline();
-    // Update timeline and active sessions every 30 seconds
+    // Zeitleiste und aktive Sitzungen alle 30 Sekunden aktualisieren
     setInterval(() => {
         updateTimeline();
         updateActiveSessions();
@@ -363,17 +363,17 @@ function initializeTimeline() {
 function createTimelineElement() {
     const calendarGrid = document.getElementById('calendar');
     
-    // Create timeline container
+    // Zeitleisten-Container erstellen
     const timelineContainer = document.createElement('div');
     timelineContainer.className = 'timeline-container';
     timelineContainer.id = 'timeline';
     
-    // Create time indicator (left side with white text)
+    // Zeitindikator erstellen (linke Seite mit weißem Text)
     const timeIndicator = document.createElement('div');
     timeIndicator.className = 'timeline-indicator';
     timeIndicator.id = 'timeline-indicator';
     
-    // Create red line (spans across columns)
+    // Rote Linie erstellen (verläuft über die Spalten)
     const timelineLine = document.createElement('div');
     timelineLine.className = 'timeline-line';
     
@@ -387,9 +387,9 @@ function updateTimeline() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // Check if current time is within calendar hours
+    // Prüfen, ob die aktuelle Uhrzeit innerhalb der Kalenderstunden liegt
     if (currentHour < START_HOUR || currentHour > END_HOUR) {
-        // Hide timeline if outside calendar hours
+        // Zeitleiste ausblenden, wenn außerhalb der Kalenderstunden
         const timeline = document.getElementById('timeline');
         if (timeline) {
             timeline.style.display = 'none';
@@ -397,16 +397,16 @@ function updateTimeline() {
         return;
     }
     
-    // Calculate position
+    // Position berechnen
     const hoursSinceStart = currentHour - START_HOUR;
     const minutesFraction = currentMinute / 60;
-    const totalHoursFraction = hoursSinceStart + minutesFraction;
+    const totalStundenFraction = hoursSinceStart + minutesFraction;
     
-    // Calculate top position (header height + all-day height + hour position)
+    // Obere Position berechnen (Kopfzeilenhöhe + Ganztagshöhe + Stundenposition)
     const headerHeight = getHeaderHeight();
-    const topPosition = headerHeight + (totalHoursFraction * HOUR_HEIGHT);
+    const topPosition = headerHeight + (totalStundenFraction * HOUR_HEIGHT);
     
-    // Update timeline position
+    // Position der Zeitleiste aktualisieren
     const timeline = document.getElementById('timeline');
     const timeIndicator = document.getElementById('timeline-indicator');
     
@@ -414,24 +414,24 @@ function updateTimeline() {
         timeline.style.display = 'block';
         timeline.style.top = `${topPosition}px`;
         
-        // Format time as HH:MM
+        // Zeit als HH:MM formatieren
         timeIndicator.textContent = formatTime(currentHour, currentMinute);
     }
 }
 
-// Helper function to format time as HH:MM
+// Hilfsfunktion zum Formatieren der Zeit als HH:MM
 function formatTime(hour, minute) {
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-// Render session blocks for all employees
+// Sitzungsblöcke für alle Mitarbeiter rendern
 function renderSessions() {
     sessions.forEach(session => {
         renderSessionBlock(session);
     });
 }
 
-// Render a single session block
+// Einen einzelnen Sitzungsblock rendern
 function renderSessionBlock(session) {
     const employerColumn = document.querySelector(`.employer-column[data-employer-id="${session.employer_id}"]`);
     
@@ -440,13 +440,13 @@ function renderSessionBlock(session) {
         return;
     }
     
-    // Parse login time
+    // Login-Zeit parsen
     const [loginHour, loginMinute] = session.login_time.split(':').map(Number);
     
-    // Calculate if session is currently active (no logout time)
+    // Berechnen, ob die Sitzung derzeit aktiv ist (keine Logout-Zeit)
     const isActive = !session.logout_time || session.logout_time === '';
     
-    // Parse logout time or use current time for active sessions
+    // Logout-Zeit parsen oder für aktive Sitzungen die aktuelle Uhrzeit verwenden
     let logoutHour, logoutMinute;
     if (isActive) {
         const now = new Date();
@@ -456,19 +456,19 @@ function renderSessionBlock(session) {
         [logoutHour, logoutMinute] = session.logout_time.split(':').map(Number);
     }
     
-    // Check if session is within visible calendar hours (any overlap)
-    // Session is visible if it ends after START_HOUR and starts before END_HOUR
+    // Prüfen, ob die Sitzung innerhalb der sichtbaren Kalenderstunden liegt (beliebige Überlappung)
+    // Eine Sitzung ist sichtbar, wenn sie nach START_HOUR endet und vor END_HOUR beginnt
     if (logoutHour < START_HOUR || loginHour >= END_HOUR) {
-        return; // Session outside visible hours
+        return; // Sitzung außerhalb der sichtbaren Stunden
     }
     
-    // Clamp times to visible range
+    // Zeiten auf den sichtbaren Bereich begrenzen
     const clampedLoginHour = Math.max(loginHour, START_HOUR);
     const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
     const clampedLogoutHour = Math.min(logoutHour, END_HOUR);
     const clampedLogoutMinute = logoutHour >= END_HOUR ? 0 : logoutMinute;
     
-    // Calculate position and height
+    // Position und Höhe berechnen
     const loginFraction = (clampedLoginHour - START_HOUR) + (clampedLoginMinute / 60);
     const logoutFraction = (clampedLogoutHour - START_HOUR) + (clampedLogoutMinute / 60);
     
@@ -476,7 +476,7 @@ function renderSessionBlock(session) {
     const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
     const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
     
-    // Create session block element
+    // Sitzungsblock-Element erstellen
     const sessionBlock = document.createElement('div');
     sessionBlock.className = isActive ? 'session-block active-session' : 'session-block';
     sessionBlock.style.top = `${topPosition}px`;
@@ -484,7 +484,7 @@ function renderSessionBlock(session) {
     sessionBlock.style.left = `${SESSION_PADDING}px`;
     sessionBlock.style.right = `${SESSION_PADDING}px`;
     
-    // Format time display
+    // Zeitanzeige formatieren
     const loginTimeStr = formatTime(loginHour, loginMinute);
     const logoutTimeStr = isActive ? 'jetzt' : formatTime(logoutHour, logoutMinute);
     
@@ -493,28 +493,28 @@ function renderSessionBlock(session) {
         <div class="session-time">${logoutTimeStr}</div>
     `;
     
-    // Store session data on the element for updates
+    // Sitzungsdaten für Aktualisierungen am Element speichern
     sessionBlock.dataset.loginTime = loginTimeStr;
     sessionBlock.dataset.logoutTime = logoutTimeStr;
     sessionBlock.dataset.isActive = isActive;
-    // Session ID is stored only for active sessions to support future updates
+    // Die Sitzungs-ID wird nur für aktive Sitzungen gespeichert, um spätere Aktualisierungen zu unterstützen
     if (isActive) {
         sessionBlock.dataset.sessionId = session.id;
     }
     
-    // Add tooltip functionality
+    // Tooltip-Funktionalität hinzufügen
     addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr);
     
     employerColumn.appendChild(sessionBlock);
 }
 
-// Update active sessions to reflect current time
+// Aktive Sitzungen aktualisieren, um die aktuelle Uhrzeit widerzuspiegeln
 function updateActiveSessions() {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     
-    // Find all active session blocks
+    // Alle aktiven Sitzungsblöcke finden
     const activeSessions = document.querySelectorAll('.session-block.active-session');
     
     activeSessions.forEach(sessionBlock => {
@@ -523,12 +523,12 @@ function updateActiveSessions() {
         
         const [loginHour, loginMinute] = loginTime.split(':').map(Number);
         
-        // Check if current time is within visible calendar hours
+        // Prüfen, ob die aktuelle Uhrzeit innerhalb der sichtbaren Kalenderstunden liegt
         if (currentHour < START_HOUR || currentHour >= END_HOUR) {
-            return; // Don't update if outside calendar hours
+            return; // Nicht aktualisieren, wenn außerhalb der Kalenderstunden
         }
         
-        // Recalculate position and height with current time
+        // Position und Höhe mit der aktuellen Uhrzeit neu berechnen
         const clampedLoginHour = Math.max(loginHour, START_HOUR);
         const clampedLoginMinute = loginHour < START_HOUR ? 0 : loginMinute;
         const clampedLogoutHour = Math.min(currentHour, END_HOUR);
@@ -541,44 +541,44 @@ function updateActiveSessions() {
         const topPosition = headerHeight + (loginFraction * HOUR_HEIGHT);
         const sessionHeight = (logoutFraction - loginFraction) * HOUR_HEIGHT;
         
-        // Update the block's position and height
+        // Position und Höhe des Blocks aktualisieren
         sessionBlock.style.top = `${topPosition}px`;
         sessionBlock.style.height = `${sessionHeight}px`;
         
-        // Update the logout time display
+        // Logout-Zeitanzeige aktualisieren
         const timeElements = sessionBlock.querySelectorAll('.session-time');
         if (timeElements.length === 2) {
             timeElements[1].textContent = 'jetzt';
         }
         
-        // Update tooltip data
+        // Tooltip-Daten aktualisieren
         sessionBlock.dataset.logoutTime = 'jetzt';
     });
 }
 
-// Add tooltip to session block
+// Tooltip zum Sitzungsblock hinzufügen
 function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
     let tooltip = null;
     
     sessionBlock.addEventListener('mouseenter', () => {
-        // Get current tooltip text from dataset
+        // Aktuellen Tooltip-Text aus dem dataset holen
         const loginTime = sessionBlock.dataset.loginTime;
         const logoutTime = sessionBlock.dataset.logoutTime;
         const tooltipText = `${loginTime} bis ${logoutTime}`;
         
-        // Create tooltip
+        // Tooltip erstellen
         tooltip = document.createElement('div');
         tooltip.className = 'session-tooltip';
         tooltip.textContent = tooltipText;
         document.body.appendChild(tooltip);
         
-        // Position tooltip near the cursor
+        // Tooltip in der Nähe des Mauszeigers positionieren
         const rect = sessionBlock.getBoundingClientRect();
         tooltip.style.left = `${rect.left + rect.width / 2}px`;
         tooltip.style.top = `${rect.top - 30}px`;
         tooltip.style.transform = 'translateX(-50%)';
         
-        // Show tooltip after a brief delay
+        // Tooltip nach einer kurzen Verzögerung anzeigen
         setTimeout(() => {
             if (tooltip) {
                 tooltip.classList.add('show');
@@ -594,13 +594,13 @@ function addTooltipToSession(sessionBlock, loginTimeStr, logoutTimeStr) {
     });
 }
 
-// Render event blocks for all employees
+// Terminblöcke für alle Mitarbeiter rendern
 function renderEvents() {
-    // Group events by employer and type (all-day vs timed)
+    // Termine nach Mitarbeiter und Typ gruppieren (ganztägig vs. zeitgebunden)
     const eventsByEmployer = {};
     
     events.forEach(event => {
-        // Support employer_ids array (multi-employer) or fall back to single employer_id
+        // Das employer_ids-Array unterstützen (mehrere Mitarbeiter) oder auf eine einzelne employer_id zurückfallen
         const ids = getEmployerIds(event);
 
         ids.forEach(empId => {
@@ -619,14 +619,14 @@ function renderEvents() {
         });
     });
     
-    // Render events for each employer
+    // Termine für jeden Mitarbeiter rendern
     Object.keys(eventsByEmployer).forEach(employerId => {
         renderAllDayEvents(employerId, eventsByEmployer[employerId].allDay);
         renderTimedEvents(employerId, eventsByEmployer[employerId].timed);
     });
 }
 
-// Render all-day events in the all-day section
+// Ganztagstermine im Ganztagsbereich rendern
 function renderAllDayEvents(employerId, allDayEvents) {
     const employerColumn = document.querySelector(`.employer-column[data-employer-id="${employerId}"]`);
     
@@ -640,7 +640,7 @@ function renderAllDayEvents(employerId, allDayEvents) {
         return;
     }
     
-    // Stack events vertically - each event takes full width with proper margins
+    // Termine vertikal stapeln - jeder Termin nimmt die volle Breite mit passenden Abständen ein
     allDayEvents.forEach((event, index) => {
         const cat = getCategoryById(event.category_id);
         const eventBlock = document.createElement('div');
@@ -648,13 +648,13 @@ function renderAllDayEvents(employerId, allDayEvents) {
         eventBlock.style.backgroundColor = cat.color;
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
-        // Remove inline width and left styles to let CSS handle margins properly
+        // Inline-Styles für Breite und linke Position entfernen, damit CSS die Abstände korrekt steuert
         eventBlock.textContent = event.title || cat.name;
         
-        // Add tooltip
+        // Tooltip hinzufügen
         addTooltipToEvent(eventBlock, event);
         
-        // Add edit click handler if user can edit this event
+        // Klick-Handler zum Bearbeiten hinzufügen, wenn der Benutzer diesen Termin bearbeiten darf
         if (canEditEvent(event)) {
             eventBlock.classList.add('editable-event');
             eventBlock.addEventListener('click', (e) => {
@@ -667,7 +667,7 @@ function renderAllDayEvents(employerId, allDayEvents) {
     });
 }
 
-// Render timed events in the hour slots
+// Zeitgebundene Termine in den Stundenfeldern rendern
 function renderTimedEvents(employerId, timedEvents) {
     const employerColumn = document.querySelector(`.employer-column[data-employer-id="${employerId}"]`);
     
@@ -675,18 +675,18 @@ function renderTimedEvents(employerId, timedEvents) {
         return;
     }
     
-    // Detect overlapping events and group them
+    // Überlappende Termine erkennen und gruppieren
     const eventGroups = detectOverlappingEvents(timedEvents);
     
-    // Render each group
+    // Jede Gruppe rendern
     eventGroups.forEach(group => {
         renderEventGroup(employerColumn, group);
     });
 }
 
-// Detect overlapping events and return groups
+// Überlappende Termine erkennen und Gruppen zurückgeben
 function detectOverlappingEvents(events) {
-    // Sort events by start time
+    // Termine nach Startzeit sortieren
     const sortedEvents = [...events].sort((a, b) => {
         return timeToMinutes(a.start_time) - timeToMinutes(b.start_time);
     });
@@ -694,11 +694,11 @@ function detectOverlappingEvents(events) {
     const groups = [];
     
     sortedEvents.forEach(event => {
-        // Find a group where this event overlaps
+        // Eine Gruppe finden, in der sich dieser Termin überlappt
         let addedToGroup = false;
         
         for (let group of groups) {
-            // Check if event overlaps with any event in the group
+            // Prüfen, ob sich der Termin mit irgendeinem Termin in der Gruppe überlappt
             const overlaps = group.some(groupEvent => {
                 return eventsOverlap(event, groupEvent);
             });
@@ -710,7 +710,7 @@ function detectOverlappingEvents(events) {
             }
         }
         
-        // If no overlap found, create a new group
+        // Wenn keine Überlappung gefunden wurde, eine neue Gruppe erstellen
         if (!addedToGroup) {
             groups.push([event]);
         }
@@ -719,7 +719,7 @@ function detectOverlappingEvents(events) {
     return groups;
 }
 
-// Check if two events overlap
+// Prüfen, ob sich zwei Termine überlappen
 function eventsOverlap(event1, event2) {
     const start1 = timeToMinutes(event1.start_time);
     const end1 = timeToMinutes(event1.end_time);
@@ -729,13 +729,13 @@ function eventsOverlap(event1, event2) {
     return start1 < end2 && start2 < end1;
 }
 
-// Convert time string (HH:MM) to minutes since midnight
+// Zeitstring (HH:MM) in Minuten seit Mitternacht umwandeln
 function timeToMinutes(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number);
     return hours * 60 + minutes;
 }
 
-// Render a group of overlapping events side by side
+// Eine Gruppe überlappender Termine nebeneinander rendern
 function renderEventGroup(employerColumn, eventGroup) {
     const groupSize = eventGroup.length;
     const eventWidth = (100 - (EVENT_PADDING * 2)) / groupSize;
@@ -745,24 +745,24 @@ function renderEventGroup(employerColumn, eventGroup) {
     });
 }
 
-// Render a single timed event
+// Einen einzelnen zeitgebundenen Termin rendern
 function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, eventWidth) {
-    // Parse start and end times
+    // Start- und Endzeiten parsen
     const [startHour, startMinute] = event.start_time.split(':').map(Number);
     const [endHour, endMinute] = event.end_time.split(':').map(Number);
     
-    // Check if event is within visible calendar hours
+    // Prüfen, ob der Termin innerhalb der sichtbaren Kalenderstunden liegt
     if (endHour < START_HOUR || startHour >= END_HOUR) {
-        return; // Event outside visible hours
+        return; // Termin außerhalb der sichtbaren Stunden
     }
     
-    // Clamp times to visible range
+    // Zeiten auf den sichtbaren Bereich begrenzen
     const clampedStartHour = Math.max(startHour, START_HOUR);
     const clampedStartMinute = startHour < START_HOUR ? 0 : startMinute;
     const clampedEndHour = Math.min(endHour, END_HOUR);
     const clampedEndMinute = endHour >= END_HOUR ? 0 : endMinute;
     
-    // Calculate position and height
+    // Position und Höhe berechnen
     const startFraction = (clampedStartHour - START_HOUR) + (clampedStartMinute / 60);
     const endFraction = (clampedEndHour - START_HOUR) + (clampedEndMinute / 60);
     
@@ -770,10 +770,10 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     const topPosition = headerHeight + (startFraction * HOUR_HEIGHT);
     const eventHeight = (endFraction - startFraction) * HOUR_HEIGHT;
     
-    // Calculate left position based on position in group
+    // Linke Position basierend auf der Position in der Gruppe berechnen
     const leftPosition = EVENT_PADDING + (eventWidth * positionIndex);
     
-    // Create event block element
+    // Terminblock-Element erstellen
     const cat = getCategoryById(event.category_id);
     const eventBlock = document.createElement('div');
     eventBlock.className = 'event-block timed-event';
@@ -783,17 +783,17 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     eventBlock.style.left = `${leftPosition}%`;
     eventBlock.style.width = `${eventWidth}%`;
     
-    // Add event content
+    // Termininhalt hinzufügen
     const timeStr = `${event.start_time}-${event.end_time}`;
     eventBlock.innerHTML = `
         <div class="event-title">${event.title || cat.name}</div>
         <div class="event-time">${timeStr}</div>
     `;
     
-    // Add tooltip
+    // Tooltip hinzufügen
     addTooltipToEvent(eventBlock, event);
     
-    // Add edit click handler if user can edit this event
+    // Klick-Handler zum Bearbeiten hinzufügen, wenn der Benutzer diesen Termin bearbeiten darf
     if (canEditEvent(event)) {
         eventBlock.classList.add('editable-event');
         eventBlock.addEventListener('click', (e) => {
@@ -805,7 +805,7 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     employerColumn.appendChild(eventBlock);
 }
 
-// Add tooltip to event block
+// Tooltip hinzufügen to event block
 function addTooltipToEvent(eventBlock, event) {
     let tooltip = null;
     
@@ -823,20 +823,20 @@ function addTooltipToEvent(eventBlock, event) {
         const cat = getCategoryById(event.category_id);
         const tooltipText = `${event.title || cat.name}\n${timeInfo}\nKategorie: ${cat.name}`;
         
-        // Create tooltip
+        // Tooltip erstellen
         tooltip = document.createElement('div');
         tooltip.className = 'event-tooltip';
         tooltip.style.whiteSpace = 'pre-line';
         tooltip.textContent = tooltipText;
         document.body.appendChild(tooltip);
         
-        // Position tooltip near the cursor
+        // Tooltip in der Nähe des Mauszeigers positionieren
         const rect = eventBlock.getBoundingClientRect();
         tooltip.style.left = `${rect.left + rect.width / 2}px`;
         tooltip.style.top = `${rect.top - 10}px`;
         tooltip.style.transform = 'translate(-50%, -100%)';
         
-        // Show tooltip after a brief delay
+        // Tooltip nach einer kurzen Verzögerung anzeigen
         setTimeout(() => {
             if (tooltip) {
                 tooltip.classList.add('show');
@@ -852,19 +852,19 @@ function addTooltipToEvent(eventBlock, event) {
     });
 }
 
-// Check if the current user can edit a given event
+// Prüfen, ob der aktuelle Benutzer einen bestimmten Termin bearbeiten darf
 function canEditEvent(event) {
     if (IS_SUPERUSER) return true;
     if (CURRENT_USER_ID === null || CURRENT_USER_ID === undefined) return false;
     return String(event.user_id) === String(CURRENT_USER_ID);
 }
 
-// Open the event edit modal for a given event
+// Das Termin-Bearbeitungsmodal für einen bestimmten Termin öffnen
 function openEditModal(event) {
     const modal = document.getElementById('eventEditModal');
     if (!modal) return;
 
-    // Populate category dropdown
+    // Kategorie-Dropdown füllen
     const categorySelect = document.getElementById('editEventCategory');
     categorySelect.innerHTML = '';
     categories.forEach(cat => {
@@ -875,7 +875,7 @@ function openEditModal(event) {
     });
     categorySelect.value = event.category_id || 0;
 
-    // Populate fields
+    // Felder füllen
     document.getElementById('editEventId').value = event.id;
     document.getElementById('editEventDate').value = event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
@@ -888,13 +888,13 @@ function openEditModal(event) {
     modal.style.display = 'flex';
 }
 
-// Close the event edit modal
+// Termin-Bearbeitungsmodal schließen
 function closeEditModal() {
     const modal = document.getElementById('eventEditModal');
     if (modal) modal.style.display = 'none';
 }
 
-// Toggle time input fields based on all-day checkbox
+// Zeiteingabefelder basierend auf der Ganztags-Checkbox ein-/ausblenden
 function toggleTimeFields(show) {
     const timeFields = document.getElementById('editEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
@@ -902,7 +902,7 @@ function toggleTimeFields(show) {
     if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
-// Delete the event currently shown in the modal
+// Den aktuell im Modal angezeigten Termin löschen
 async function deleteEventFromModal() {
     const id = document.getElementById('editEventId').value;
 
@@ -936,7 +936,7 @@ async function deleteEventFromModal() {
         return;
     }
 
-    // Remove the event from the local events array
+    // Den Termin aus dem lokalen events-Array entfernen
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {
         events.splice(eventIndex, 1);
@@ -944,13 +944,13 @@ async function deleteEventFromModal() {
 
     closeEditModal();
 
-    // Re-render calendar and events (recalculates all-day section heights)
+    // Kalender und Termine neu rendern (berechnet die Höhen des Ganztagsbereichs neu)
     renderCalendar();
     renderSessions();
     renderEvents();
 }
 
-// Save changes from the edit modal back into the events array and re-render
+// Änderungen aus dem Bearbeitungsmodal zurück in das events-Array speichern und neu rendern
 async function saveEventFromModal() {
     const id = document.getElementById('editEventId').value;
     const date = document.getElementById('editEventDate').value;
@@ -971,7 +971,7 @@ async function saveEventFromModal() {
         return;
     }
 
-    // Validate that timed events have both start and end times
+    // Sicherstellen, dass zeitgebundene Termine sowohl Start- als auch Endzeiten haben
     if (!isAllDay && (!startTime || !endTime)) {
         alert('Bitte Start- und Endzeit angeben.');
         return;
@@ -1012,13 +1012,13 @@ async function saveEventFromModal() {
 
     const currentDateStr = formatDateForAPI(currentDate);
 
-    // Find and update the event in the local events array
+    // Den Termin im lokalen events-Array finden und aktualisieren
     const eventIndex = events.findIndex(e => String(e.id) === String(id));
     if (eventIndex !== -1) {
         const effectiveDateTo = dateTo || date;
         const stillVisible = date <= currentDateStr && effectiveDateTo >= currentDateStr;
         if (!stillVisible) {
-            // Event no longer covers the current date – remove from view
+            // Der Termin deckt das aktuelle Datum nicht mehr ab – aus der Ansicht entfernen
             events.splice(eventIndex, 1);
         } else {
             events[eventIndex] = {
@@ -1036,18 +1036,18 @@ async function saveEventFromModal() {
 
     closeEditModal();
 
-    // Re-render calendar and events (recalculates all-day section heights)
+    // Kalender und Termine neu rendern (berechnet die Höhen des Ganztagsbereichs neu)
     renderCalendar();
     renderSessions();
     renderEvents();
 }
 
-// Open the new event modal, pre-filling the date with the current calendar day
+// Das neue Termin-Modal öffnen und das Datum mit dem aktuellen Kalendertag vorausfüllen
 function openNewEventModal() {
     const modal = document.getElementById('newEventModal');
     if (!modal) return;
 
-    // Populate employer dropdown from the loaded employers array
+    // Mitarbeiter-Dropdown aus dem geladenen employers-Array füllen
     const employerSelect = document.getElementById('newEventEmployer');
     employerSelect.innerHTML = '';
     employers.forEach(emp => {
@@ -1057,7 +1057,7 @@ function openNewEventModal() {
         employerSelect.appendChild(option);
     });
 
-    // Populate category dropdown
+    // Kategorie-Dropdown füllen
     const categorySelect = document.getElementById('newEventCategory');
     categorySelect.innerHTML = '';
     categories.forEach(cat => {
@@ -1067,7 +1067,7 @@ function openNewEventModal() {
         categorySelect.appendChild(option);
     });
 
-    // Reset fields
+    // Felder zurücksetzen
     document.getElementById('newEventDate').value = formatDateForAPI(currentDate);
     document.getElementById('newEventDateTo').value = formatDateForAPI(currentDate);
     document.getElementById('newEventTitle').value = '';
@@ -1079,13 +1079,13 @@ function openNewEventModal() {
     modal.style.display = 'flex';
 }
 
-// Close the new event modal
+// Das neue Termin-Modal schließen
 function closeNewEventModal() {
     const modal = document.getElementById('newEventModal');
     if (modal) modal.style.display = 'none';
 }
 
-// Toggle time input fields in the new event modal
+// Zeiteingabefelder im neuen Termin-Modal ein-/ausblenden
 function toggleNewEventTimeFields(show) {
     const timeFields = document.getElementById('newEventTimeFields');
     if (timeFields) timeFields.style.display = show ? 'grid' : 'none';
@@ -1093,7 +1093,7 @@ function toggleNewEventTimeFields(show) {
     if (dateToField) dateToField.style.display = show ? 'none' : 'block';
 }
 
-// Create a new event via event_iec_ajax2.php
+// Einen neuen Termin über event_iec_ajax2.php erstellen
 async function createEventFromModal() {
     const employerSelect = document.getElementById('newEventEmployer');
     const employerIds = Array.from(employerSelect.selectedOptions).map(o => o.value);
@@ -1157,13 +1157,13 @@ async function createEventFromModal() {
             return;
         }
 
-        // Add the new event to the local array only if it covers the current date
+        // Den neuen Termin nur dann zum lokalen Array hinzufügen, wenn er das aktuelle Datum abdeckt
         const currentDateStr = formatDateForAPI(currentDate);
         if (result.event) {
             const effectiveDateTo = result.event.date_to || result.event.date;
             if (result.event.date <= currentDateStr && effectiveDateTo >= currentDateStr) {
                 events.push(result.event);
-                // Re-render calendar and events (recalculates all-day section heights)
+                // Kalender und Termine neu rendern (berechnet die Höhen des Ganztagsbereichs neu)
                 renderCalendar();
                 renderSessions();
                 renderEvents();
@@ -1179,7 +1179,7 @@ async function createEventFromModal() {
     closeNewEventModal();
 }
 
-// Wire up modal events after the DOM is ready
+// Modal-Ereignisse verbinden, nachdem das DOM bereit ist
 document.addEventListener('DOMContentLoaded', () => {
     const allDayCheckbox = document.getElementById('editEventIsAllDay');
     if (allDayCheckbox) {
@@ -1200,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('editModalSave');
     if (saveBtn) saveBtn.addEventListener('click', saveEventFromModal);
 
-    // Close modal when clicking the backdrop
+    // Modal schließen, wenn auf den Hintergrund geklickt wird
     const modal = document.getElementById('eventEditModal');
     if (modal) {
         modal.addEventListener('click', (e) => {
@@ -1208,11 +1208,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // New Event button
+    // Schaltfläche „Neuer Termin“
     const newEventBtn = document.getElementById('newEventBtn');
     if (newEventBtn) newEventBtn.addEventListener('click', openNewEventModal);
 
-    // New Event modal controls
+    // Steuerelemente für das neue Termin-Modal
     const newEventAllDay = document.getElementById('newEventIsAllDay');
     if (newEventAllDay) {
         newEventAllDay.addEventListener('change', () => {

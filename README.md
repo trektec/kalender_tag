@@ -22,6 +22,7 @@ Eine Wochenübersicht von Montag bis Sonntag mit Tages-Spalten für alle Events.
   - Dynamischer Abruf von Terminen über `event_ajax.php`
   - Verschiedene Kategorien mit unterschiedlichen Farben
   - Ganztägige Termine werden im Ganztags-Bereich angezeigt
+  - Optionaler Hinweis-Marker pro Termin über das Terminformular
   - **Mehrere Ganztags-Events werden vertikal gestapelt** (untereinander)
   - Überlappende Termine werden nebeneinander dargestellt
   - Einstellbare Breite über `EVENT_PADDING` Konfiguration
@@ -30,6 +31,7 @@ Eine Wochenübersicht von Montag bis Sonntag mit Tages-Spalten für alle Events.
 ### Wochenkalender Features
 - **Wochenübersicht**: Montag bis Sonntag in Spalten
 - **Ganztags- und normale Events**: Nur Events werden angezeigt (keine Sessions, keine Mitarbeiter-Spalten)
+- **Hinweis-Marker**: Markierte Termine zeigen ein zusätzliches Symbol im Kalender
 - **Mitarbeiter-Info in Tooltips**: Beim Hover über ein Event wird der zuständige Mitarbeiter angezeigt
 - **Wochennavigation**: Vorherige Woche / Diese Woche / Nächste Woche
 - **Gleiches Design**: Verwendet das gleiche CSS wie der Tageskalender

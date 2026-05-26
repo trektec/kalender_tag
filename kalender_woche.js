@@ -67,6 +67,22 @@ function getContrastingTextColor(hexColor) {
     return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
+function shouldShowMarker(event) {
+    return !!event.show_marker;
+}
+
+function createMarkerBadge() {
+    const markerBadge = document.createElement('span');
+    markerBadge.className = 'event-marker-badge';
+    markerBadge.textContent = '★';
+    markerBadge.setAttribute('aria-label', 'Hinweis');
+    return markerBadge;
+}
+
+function getMarkerTooltipText(event) {
+    return shouldShowMarker(event) ? '\nHinweis: aktiviert' : '';
+}
+
 // Den Montag der Woche für ein gegebenes Datum ermitteln
 function getMondayOfWeek(date) {
     const d = new Date(date);
@@ -514,9 +530,19 @@ function renderAllDayEvents(dayIndex, allDayEvents) {
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
         const allDayTitle = event.title || cat.name;
         const allDayNames = getEmployerNames(event);
-        eventBlock.innerHTML = allDayNames
-            ? `<span class="event-title-text">${allDayTitle}</span><span class="event-employers"> | ${allDayNames}</span>`
-            : `<span class="event-title-text">${allDayTitle}</span>`;
+        const titleElement = document.createElement('span');
+        titleElement.className = 'event-title-text';
+        titleElement.textContent = allDayTitle;
+        eventBlock.appendChild(titleElement);
+        if (shouldShowMarker(event)) {
+            eventBlock.appendChild(createMarkerBadge());
+        }
+        if (allDayNames) {
+            const employerElement = document.createElement('span');
+            employerElement.className = 'event-employers';
+            employerElement.textContent = `| ${allDayNames}`;
+            eventBlock.appendChild(employerElement);
+        }
         
         // Tooltip mit Mitarbeiterinformationen hinzufügen
         addTooltipToEvent(eventBlock, event);
@@ -653,11 +679,28 @@ function renderTimedEvent(dayColumn, event, positionIndex, totalInGroup, eventWi
     // Termininhalt hinzufügen
     const timeStr = `${event.start_time}-${event.end_time}`;
     const employerNames = getEmployerNames(event);
-    eventBlock.innerHTML = `
-        <div class="event-title">${event.title || cat.name}</div>
-        <div class="event-time">${timeStr}</div>
-        ${employerNames ? `<div class="event-employers">${employerNames}</div>` : ''}
-    `;
+    const titleRow = document.createElement('div');
+    titleRow.className = 'event-title-row';
+    const titleElement = document.createElement('div');
+    titleElement.className = 'event-title';
+    titleElement.textContent = event.title || cat.name;
+    titleRow.appendChild(titleElement);
+    if (shouldShowMarker(event)) {
+        titleRow.appendChild(createMarkerBadge());
+    }
+    eventBlock.appendChild(titleRow);
+
+    const timeElement = document.createElement('div');
+    timeElement.className = 'event-time';
+    timeElement.textContent = timeStr;
+    eventBlock.appendChild(timeElement);
+
+    if (employerNames) {
+        const employersElement = document.createElement('div');
+        employersElement.className = 'event-employers';
+        employersElement.textContent = employerNames;
+        eventBlock.appendChild(employersElement);
+    }
     
     // Tooltip mit Mitarbeiterinformationen hinzufügen
     addTooltipToEvent(eventBlock, event);
@@ -705,7 +748,7 @@ function addTooltipToEvent(eventBlock, event) {
         const employerNames = getEmployerNames(event);
         const employeeInfo = employerNames ? `\nMitarbeiter: ${employerNames}` : '';
         const cat = getCategoryById(event.category_id);
-        const tooltipText = `${event.title || cat.name}\n${timeInfo}\nKategorie: ${cat.name}${employeeInfo}`;
+        const tooltipText = `${event.title || cat.name}\n${timeInfo}\nKategorie: ${cat.name}${getMarkerTooltipText(event)}${employeeInfo}`;
         
         // Tooltip erstellen
         tooltip = document.createElement('div');
@@ -765,6 +808,7 @@ function openEditModal(event) {
     document.getElementById('editEventDateTo').value = event.date_to || event.date || '';
     document.getElementById('editEventTitle').value = event.title || '';
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
+    document.getElementById('editEventShowMarker').checked = !!event.show_marker;
     document.getElementById('editEventStartTime').value = event.start_time || '';
     document.getElementById('editEventEndTime').value = event.end_time || '';
     toggleTimeFields(!event.is_all_day);
@@ -840,6 +884,7 @@ async function saveEventFromModal() {
     const title = document.getElementById('editEventTitle').value.trim();
     const categoryId = parseInt(document.getElementById('editEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
+    const showMarker = document.getElementById('editEventShowMarker').checked;
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
@@ -868,6 +913,7 @@ async function saveEventFromModal() {
         formData.append('title', title);
         formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('show_marker', showMarker ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 
@@ -915,6 +961,7 @@ async function saveEventFromModal() {
                 title,
                 category_id: categoryId,
                 is_all_day: isAllDay,
+                show_marker: showMarker,
                 start_time: isAllDay ? '' : startTime,
                 end_time: isAllDay ? '' : endTime
             };
@@ -959,6 +1006,7 @@ function openNewEventModal() {
     document.getElementById('newEventDateTo').value = formatDateForAPI(monday);
     document.getElementById('newEventTitle').value = '';
     document.getElementById('newEventIsAllDay').checked = false;
+    document.getElementById('newEventShowMarker').checked = false;
     document.getElementById('newEventStartTime').value = '';
     document.getElementById('newEventEndTime').value = '';
     toggleNewEventTimeFields(true);
@@ -988,6 +1036,7 @@ async function createEventFromModal() {
     const title = document.getElementById('newEventTitle').value.trim();
     const categoryId = parseInt(document.getElementById('newEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
+    const showMarker = document.getElementById('newEventShowMarker').checked;
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
@@ -1025,6 +1074,7 @@ async function createEventFromModal() {
         formData.append('title', title);
         formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('show_marker', showMarker ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 

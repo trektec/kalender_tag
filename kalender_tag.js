@@ -51,6 +51,22 @@ function getContrastingTextColor(hexColor) {
     return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
+function shouldShowMarker(event) {
+    return !!event.show_marker;
+}
+
+function createMarkerBadge() {
+    const markerBadge = document.createElement('span');
+    markerBadge.className = 'event-marker-badge';
+    markerBadge.textContent = '★';
+    markerBadge.setAttribute('aria-label', 'Hinweis');
+    return markerBadge;
+}
+
+function getMarkerTooltipText(event) {
+    return shouldShowMarker(event) ? '\nHinweis: aktiviert' : '';
+}
+
 // Kalender beim Laden der Seite initialisieren
 document.addEventListener('DOMContentLoaded', async () => {
     setupNavigationHandlers();
@@ -648,8 +664,12 @@ function renderAllDayEvents(employerId, allDayEvents) {
         eventBlock.style.backgroundColor = cat.color;
         eventBlock.style.height = `${ALL_DAY_EVENT_HEIGHT}px`;
         eventBlock.style.top = `${index * ALL_DAY_EVENT_HEIGHT}px`;
-        // Inline-Styles für Breite und linke Position entfernen, damit CSS die Abstände korrekt steuert
-        eventBlock.textContent = event.title || cat.name;
+        const titleElement = document.createElement('span');
+        titleElement.textContent = event.title || cat.name;
+        eventBlock.appendChild(titleElement);
+        if (shouldShowMarker(event)) {
+            eventBlock.appendChild(createMarkerBadge());
+        }
         
         // Tooltip hinzufügen
         addTooltipToEvent(eventBlock, event);
@@ -785,10 +805,21 @@ function renderTimedEvent(employerColumn, event, positionIndex, totalInGroup, ev
     
     // Termininhalt hinzufügen
     const timeStr = `${event.start_time}-${event.end_time}`;
-    eventBlock.innerHTML = `
-        <div class="event-title">${event.title || cat.name}</div>
-        <div class="event-time">${timeStr}</div>
-    `;
+    const titleRow = document.createElement('div');
+    titleRow.className = 'event-title-row';
+    const titleElement = document.createElement('div');
+    titleElement.className = 'event-title';
+    titleElement.textContent = event.title || cat.name;
+    titleRow.appendChild(titleElement);
+    if (shouldShowMarker(event)) {
+        titleRow.appendChild(createMarkerBadge());
+    }
+    eventBlock.appendChild(titleRow);
+
+    const timeElement = document.createElement('div');
+    timeElement.className = 'event-time';
+    timeElement.textContent = timeStr;
+    eventBlock.appendChild(timeElement);
     
     // Tooltip hinzufügen
     addTooltipToEvent(eventBlock, event);
@@ -821,7 +852,7 @@ function addTooltipToEvent(eventBlock, event) {
         }
         
         const cat = getCategoryById(event.category_id);
-        const tooltipText = `${event.title || cat.name}\n${timeInfo}\nKategorie: ${cat.name}`;
+        const tooltipText = `${event.title || cat.name}\n${timeInfo}\nKategorie: ${cat.name}${getMarkerTooltipText(event)}`;
         
         // Tooltip erstellen
         tooltip = document.createElement('div');
@@ -881,6 +912,7 @@ function openEditModal(event) {
     document.getElementById('editEventDateTo').value = event.date_to || event.date || formatDateForAPI(currentDate);
     document.getElementById('editEventTitle').value = event.title || '';
     document.getElementById('editEventIsAllDay').checked = !!event.is_all_day;
+    document.getElementById('editEventShowMarker').checked = !!event.show_marker;
     document.getElementById('editEventStartTime').value = event.start_time || '';
     document.getElementById('editEventEndTime').value = event.end_time || '';
     toggleTimeFields(!event.is_all_day);
@@ -957,6 +989,7 @@ async function saveEventFromModal() {
     const title = document.getElementById('editEventTitle').value.trim();
     const categoryId = parseInt(document.getElementById('editEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('editEventIsAllDay').checked;
+    const showMarker = document.getElementById('editEventShowMarker').checked;
     const dateTo = isAllDay ? (document.getElementById('editEventDateTo').value || date) : date;
     const startTime = document.getElementById('editEventStartTime').value;
     const endTime = document.getElementById('editEventEndTime').value;
@@ -986,6 +1019,7 @@ async function saveEventFromModal() {
         formData.append('title', title);
         formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('show_marker', showMarker ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 
@@ -1028,6 +1062,7 @@ async function saveEventFromModal() {
                 title,
                 category_id: categoryId,
                 is_all_day: isAllDay,
+                show_marker: showMarker,
                 start_time: isAllDay ? '' : startTime,
                 end_time: isAllDay ? '' : endTime
             };
@@ -1072,6 +1107,7 @@ function openNewEventModal() {
     document.getElementById('newEventDateTo').value = formatDateForAPI(currentDate);
     document.getElementById('newEventTitle').value = '';
     document.getElementById('newEventIsAllDay').checked = false;
+    document.getElementById('newEventShowMarker').checked = false;
     document.getElementById('newEventStartTime').value = '';
     document.getElementById('newEventEndTime').value = '';
     toggleNewEventTimeFields(true);
@@ -1101,6 +1137,7 @@ async function createEventFromModal() {
     const title = document.getElementById('newEventTitle').value.trim();
     const categoryId = parseInt(document.getElementById('newEventCategory').value, 10) || 0;
     const isAllDay = document.getElementById('newEventIsAllDay').checked;
+    const showMarker = document.getElementById('newEventShowMarker').checked;
     const dateTo = isAllDay ? (document.getElementById('newEventDateTo').value || date) : date;
     const startTime = document.getElementById('newEventStartTime').value;
     const endTime = document.getElementById('newEventEndTime').value;
@@ -1138,6 +1175,7 @@ async function createEventFromModal() {
         formData.append('title', title);
         formData.append('category_id', categoryId);
         formData.append('is_all_day', isAllDay ? '1' : '0');
+        formData.append('show_marker', showMarker ? '1' : '0');
         formData.append('start_time', isAllDay ? '' : startTime);
         formData.append('end_time', isAllDay ? '' : endTime);
 

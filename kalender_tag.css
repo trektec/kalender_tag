@@ -298,6 +298,7 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     font-weight: bold;
     font-size: 12px;
     text-align: center;
@@ -321,6 +322,35 @@ h1 {
 .event-time {
     font-size: 10px;
     opacity: 0.9;
+}
+
+.event-marker-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.event-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+    min-width: 0;
+}
+
+.event-title-row .event-title {
+    margin-bottom: 0;
+    flex: 1;
 }
 
 .event-tooltip {
@@ -524,4 +554,3 @@ h1 {
 .new-event-btn:active {
     background-color: #ba4a00;
 }
-
